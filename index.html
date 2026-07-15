@@ -155,7 +155,7 @@
 
     // ฟังก์ชันดึงประวัติล่าสุดจากคลาวด์
     function fetchLogsFromCloud() {
-        if(GOOGLE_SCRIPT_URL.includes("วาง_URL")) return;
+        if(GOOGLE_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbwi5MA4zGdhH8HBXFAob6dteJui-MLsPrlaZvcw_FD_Y0rIC-6t3Ud1G7yPP7_sy0LvgA/exec")) return;
         
         fetch(GOOGLE_SCRIPT_URL)
             .then(res => res.json())
@@ -171,7 +171,7 @@
     // ฟังก์ชันบันทึกข้อมูลยิงขึ้นคลาวด์ Google Sheets
     function handleAction(actionType) {
         const assetId = assetInput.value.trim();
-        if (!assetId || GOOGLE_SCRIPT_URL.includes("วาง_URL")) {
+        if (!assetId || GOOGLE_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbwi5MA4zGdhH8HBXFAob6dteJui-MLsPrlaZvcw_FD_Y0rIC-6t3Ud1G7yPP7_sy0LvgA/exec")) {
             alert('กรุณาสแกนรหัส หรือตรวจสอบการตั้งค่า URL ของระบบคลาวด์ก่อนครับ');
             return;
         }
