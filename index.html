@@ -277,25 +277,24 @@
         statusDiv.innerText = "🔄 กำลังอัปเดตตำแหน่งตู้บนคลาวด์...";
         
         fetch(GOOGLE_SCRIPT_URL, {
-            method: 'PUT',
+            method: 'POST', // เปลี่ยนมาใช้ POST ที่กูเกิลอนุญาต
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                actionType: 'UPDATE', // ส่งบอก Google Sheets ว่าขอแก้ไขแถวนะ
                 id: String(id),
                 cabinet: newCabinetValue
             })
         }).then(() => {
             statusDiv.innerText = "✅ อัปเดตข้อมูลบนคลาวด์สำเร็จ!";
-            // บันทึกค่าลงตัวแปร Local ทันทีเพื่อให้เวลาดาวน์โหลด Excel ได้ค่าใหม่ทันที
             const targetLog = logs.find(log => String(log.id) === String(id));
             if (targetLog) targetLog.cabinet = newCabinetValue;
-            renderLogs(); // วาดรายการประวัติใหม่เพื่ออัปเดตข้อความหมายเหตุใน Dropdown
+            renderLogs();
         }).catch(err => {
             alert('ไม่สามารถอัปเดตข้อมูลบนคลาวด์ได้: ' + err.message);
             fetchLogsFromCloud();
         });
     }
-
     function deleteLog(index) {
         if (confirm("คุณแน่ใจใช่ไหมว่าต้องการลบประวัติรายการนี้ออกจากหน้านี้?")) {
             logs.splice(index, 1);
