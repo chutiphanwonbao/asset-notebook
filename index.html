@@ -68,7 +68,7 @@
             <video id="video" autoplay playsinline></video>
             <div class="scan-region" id="scanRegion"></div>
         </div>
-        <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 สแกนอ</button>
+        <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 สแกน</button>
         <div class="status-text" id="status">สถานะ: รอการเชื่อมต่อ</div>
     </div>
 
@@ -277,19 +277,18 @@
         statusDiv.innerText = "🔄 กำลังอัปเดตตำแหน่งตู้บนคลาวด์...";
         
         fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST', // เปลี่ยนมาใช้ POST ที่กูเกิลอนุญาต
+            method: 'POST', // ใช้ POST เสมอเพื่อความชัวร์ในการคุยกับกูเกิล
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                actionType: 'UPDATE', // ส่งบอก Google Sheets ว่าขอแก้ไขแถวนะ
+                actionType: 'UPDATE', // ⚠️ ใช้ตัวพิมพ์ใหญ่ให้ตรงกับใน Google Script เป๊ะๆ
                 id: String(id),
                 cabinet: newCabinetValue
             })
         }).then(() => {
-            statusDiv.innerText = "✅ อัปเดตข้อมูลบนคลาวด์สำเร็จ!";
-            const targetLog = logs.find(log => String(log.id) === String(id));
-            if (targetLog) targetLog.cabinet = newCabinetValue;
-            renderLogs();
+            statusDiv.innerText = "✅ บันทึกการแก้ไขลงคลาวด์แล้ว!";
+            // 🔄 สั่งโหลดประวัติใหม่จากคลาวด์มาแสดงผล เพื่อเช็กว่าค่าใน Sheet เปลี่ยนจริงไหม
+            setTimeout(fetchLogsFromCloud, 1200);
         }).catch(err => {
             alert('ไม่สามารถอัปเดตข้อมูลบนคลาวด์ได้: ' + err.message);
             fetchLogsFromCloud();
