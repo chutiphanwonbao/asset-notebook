@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Notebook (OCR & Scan Time Tracker)</title>
+    <title>Asset Notebook (OCR & Cabinet Tracker)</title>
     <!-- ดึงไลบรารีสแกนตัวอักษร -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- ดึงไลบรารีสำหรับสร้างไฟล์ Excel บนหน้าเว็บ -->
@@ -49,13 +49,12 @@
             overflow: hidden;
         }
         #video { width: 100%; display: block; }
-        /* กรอบเล็งตัวอักษรทรงสติกเกอร์ผืนผ้าแนวนอน */
         .scan-region {
             position: absolute;
-            top: 42.5%;          /* ขยับมาอยู่กึ่งกลางแนวตั้งพอดี */
-            left: 15%;           /* ขยับเข้ามาด้านในซ้ายขวาเพิ่มขึ้น */
-            width: 70%;          /* ความกว้าง 70% ของหน้าจอ */
-            height: 10%;         /* ปรับความสูงเหลือเพียง 15% ให้แคบและผอมพอดีสติกเกอร์ */
+            top: 42.5%;
+            left: 15%;
+            width: 70%;
+            height: 15%;
             border: 3px dashed #3182ce;
             box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
             pointer-events: none;
@@ -79,16 +78,34 @@
             color: #718096;
             margin: 8px 0;
         }
-        input {
+        input, select {
             width: 100%;
             padding: 12px;
             border: 2px solid #cbd5e0;
             border-radius: 6px;
             box-sizing: border-box;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
+        }
+        input {
             text-align: center;
             color: #2b6cb0;
+            font-size: 18px;
+        }
+        select {
+            color: #4a5568;
+            background-color: #fff;
+            cursor: pointer;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
         }
         .btn-group {
             display: grid;
@@ -132,6 +149,17 @@
             margin-top: 4px;
             line-height: 1.4;
         }
+        .cabinet-badge {
+            background-color: #edf2f7;
+            color: #4a5568;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 4px;
+            border: 1px solid #cbd5e0;
+        }
         .status-out { background-color: #fed7d7; color: #9b2c2c; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
         .status-in { background-color: #c6f6d5; color: #22543d; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
         #canvas { display: none; }
@@ -140,7 +168,7 @@
 <body>
 
 <div class="container">
-    <h2>📝 Asset Notebook + บันทึกเวลาสแกน</h2>
+    <h2>📝 Asset Notebook + บันทึกตู้เก็บของ</h2>
     
     <!-- 1. ส่วนกล้องสแกน -->
     <div class="section">
@@ -155,10 +183,24 @@
 
     <!-- 2. ฟอร์มและปุ่มกดทำรายการ -->
     <div class="section">
-        <div class="section-title">🔄 ข้อความที่อ่านได้ / ทำรายการ</div>
-        <input type="text" id="assetId" placeholder="ตัวอักษรจะโผล่ที่นี่ (หรือพิมพ์เองได้)">
-        <!-- ซ่อนฟิลด์สำหรับเก็บเวลาที่สแกนล่าสุดไว้ทำงานหลังบ้าน -->
-        <input type="hidden" id="lastScanTime" value="">
+        <div class="section-title">🔄 ระบุรายละเอียดข้อมูล</div>
+        
+        <div class="form-group">
+            <label for="assetId">รหัสทรัพย์สินที่สแกนได้</label>
+            <input type="text" id="assetId" placeholder="ตัวอักษรจะโผล่ที่นี่">
+            <input type="hidden" id="lastScanTime" value="">
+        </div>
+
+        <div class="form-group">
+            <label for="cabinetLocation">📦 ตู้เก็บของที่ทำรายการ</label>
+            <select id="cabinetLocation">
+                <option value="ตู้ A">ตู้ A</option>
+                <option value="ตู้ B">ตู้ B</option>
+                <option value="ตู้ C">ตู้ C</option>
+                <option value="ตู้ D">ตู้ D</option>
+                <option value="โต๊ะทำงานส่วนตัว">โต๊ะทำงานส่วนตัว</option>
+            </select>
+        </div>
         
         <div class="btn-group">
             <button class="btn-checkout" onclick="handleAction('หยิบออก')">📤 หยิบออก</button>
@@ -184,52 +226,40 @@
     const statusDiv = document.getElementById('status');
     const assetInput = document.getElementById('assetId');
     const scanTimeInput = document.getElementById('lastScanTime');
+    const cabinetSelect = document.getElementById('cabinetLocation');
 
     // เปิดกล้องหลังอัตโนมัติ
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
         .then(stream => { video.srcObject = stream; })
         .catch(err => { statusDiv.innerText = "เปิดกล้องไม่ได้: " + err.message; });
 
-    // ฟังก์ชันจัดรูปแบบวันเวลาให้เป็นระเบียบ
     function getFormattedDateTime() {
         const now = new Date();
         return now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
     }
 
-   // ฟังก์ชันจับภาพแบบล็อกกึ่งกลางวิดีโอจริง (แก้ปัญหาภาพเยื้องไปอ่านคีย์บอร์ด)
+    // ฟังก์ชันจับภาพและสแกนเฉพาะกึ่งกลางภาพกล้องจริง
     async function captureAndRecognize() {
         statusDiv.innerText = "⏳ กำลังอ่านตัวอักษร...";
         assetInput.value = "";
         scanTimeInput.value = "";
         
         const ctx = canvas.getContext('2d');
-        
-        // 1. ดึงขนาดความละเอียดจริงของตัวกล้อง (ไม่ใช่ขนาดที่แสดงบนหน้าจอ)
         const videoWidth = video.videoWidth;
         const videoHeight = video.videoHeight;
         
-        // 2. กำหนดขนาดกล่องที่จะครอปตัดภาพเป็นพิกเซลที่แน่นอน (ทรงสติกเกอร์ผืนผ้าแคบเรียว)
-        const cropWidth = 500;  // ความกว้างกล่องสแกน
-        const cropHeight = 120; // ความสูงกล่องสแกน
-        
-        // 3. คำนวณหาจุดกึ่งกลางของกล้องจริง เพื่อวางกล่องตัดภาพไว้ตรงกลางเป๊ะๆ
+        const cropWidth = 500;
+        const cropHeight = 120;
         const cropLeft = (videoWidth - cropWidth) / 2;
         const cropTop = (videoHeight - cropHeight) / 2;
         
-        // 4. ปรับขนาดคานวาสให้เท่ากับขนาดกล่องที่เราจะส่งให้ AI อ่าน
         canvas.width = cropWidth;
         canvas.height = cropHeight;
-        
-        // 5. ตัดกระดาษเฉพาะตรงกึ่งกลางเลนส์กล้องมาใช้งาน
         ctx.drawImage(video, cropLeft, cropTop, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
         try {
-            // 6. ส่งภาพที่ตัดตรงกลางไปให้ Tesseract.js อ่านค่า
             const result = await Tesseract.recognize(canvas, 'eng');
-            
-            // ล้างขยะที่เป็นตัวอักษรแปลกๆ ทิ้งไป ดึงเฉพาะข้อความภาษาอังกฤษ ตัวเลข และขีดกลาง
             let cleanText = result.data.text.trim().replace(/[^a-zA-Z0-9-_ ]/g, '');
-            
             if (cleanText) {
                 assetInput.value = cleanText;
                 scanTimeInput.value = getFormattedDateTime();
@@ -239,7 +269,6 @@
             }
         } catch (error) {
             statusDiv.innerText = "เกิดข้อผิดพลาดในการอ่าน";
-            console.error(error);
         }
     }
 
@@ -254,22 +283,22 @@
             return;
         }
 
-        // หากผู้ใช้พิมพ์มือเองและไม่มีเวลาสแกน ให้ใช้เวลาปัจจุบันเป็นเวลาสแกน
         const scanTime = scanTimeInput.value || getFormattedDateTime();
         const actionTime = getFormattedDateTime();
+        const cabinet = cabinetSelect.value; // ดึงค่าตู้ที่เลือก
 
-        // บันทึกข้อมูลแบบมีทั้งเวลาสแกน และเวลาทำรายการ
+        // บันทึกข้อมูลเพิ่มฟิลด์ตู้เก็บของ (cabinet)
         logs.unshift({ 
             asset: assetId, 
             action: actionType, 
             scanTime: scanTime,
-            actionTime: actionTime 
+            actionTime: actionTime,
+            cabinet: cabinet 
         });
         localStorage.setItem('myAssetLogs', JSON.stringify(logs));
         
         renderLogs();
         
-        // เคลียร์ค่าเพื่อรอชิ้นถัดไป
         assetInput.value = '';
         scanTimeInput.value = '';
         statusDiv.innerText = "บันทึกข้อมูลเรียบร้อย";
@@ -284,7 +313,8 @@
         logListElement.innerHTML = logs.map(log => `
             <div class="log-item">
                 <div>
-                    <strong>${log.asset}</strong><br>
+                    <strong>${log.asset}</strong> 
+                    <div class="cabinet-badge">📍 ${log.cabinet || 'ไม่ได้ระบุ'}</div>
                     <div class="time-info">
                         📸 สแกนเมื่อ: ${log.scanTime}<br>
                         ⚡ ทำรายการ: ${log.actionTime}
@@ -301,12 +331,13 @@
             return;
         }
 
-        // เพิ่มคอลัมน์ "วัน-เวลาที่สแกน" เข้าไปในไฟล์ Excel
+        // เพิ่มคอลัมน์ตำแหน่งตู้เก็บของลงในไฟล์ Excel
         const dataForExcel = logs.map((log, index) => ({
             "ลำดับที่": logs.length - index,
             "วัน-เวลาที่สแกนสติกเกอร์": log.scanTime,
             "วัน-เวลาที่กดทำรายการ": log.actionTime,
             "รหัส / ชื่อทรัพย์สิน": log.asset,
+            "ตู้เก็บของ / ตำแหน่ง": log.cabinet || 'ไม่ได้ระบุ',
             "สถานะรายการ": log.action
         }));
 
