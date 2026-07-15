@@ -195,32 +195,47 @@
         return now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
     }
 
-    // ฟังก์ชันจับภาพและสแกนตัวอักษร (OCR)
+    // ฟังก์ชันจับภาพเฉพาะในกรอบที่กำหนด แล้วส่งไปอ่านตัวอักษร
     async function captureAndRecognize() {
         statusDiv.innerText = "⏳ กำลังอ่านตัวอักษร...";
         assetInput.value = "";
-        scanTimeInput.value = ""; // รีเซ็ตค่าเวลาสแกนก่อนหน้า
+        scanTimeInput.value = "";
         
         const ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // 1. ตั้งค่าขนาดความกว้าง/สูงของคานวาสให้เท่ากับวิดีโอจริงจากกล้อง
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+        
+        // 2. คำนวณพิกัดของกรอบเส้นประ (อิงตาม CSS: top 35%, left 10%, width 80%, height 30%)
+        const cropLeft = videoWidth * 0.10;
+        const cropTop = videoHeight * 0.35;
+        const cropWidth = videoWidth * 0.80;
+        const cropHeight = videoHeight * 0.30;
+        
+        // 3. ปรับขนาดคานวาสให้เท่ากับขนาดของ "กรอบครอป" เท่านั้น
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
+        
+        // 4. วาดภาพลงบนคานวาส โดยตัดเอามาเฉพาะพื้นที่ในกรอบเส้นประ
+        // พารามิเตอร์: ctx.drawImage(ภาพต้นฉบับ, xเริ่มตัด, yเริ่มตัด, กว้างที่ตัด, สูงที่ตัด, xที่วาง, yที่วาง, กว้างที่วาง, สูงที่วาง)
+        ctx.drawImage(video, cropLeft, cropTop, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
         try {
+            // 5. ส่งเฉพาะภาพที่ถูกตัดในกรอบไปให้ AI ประมวลผล
             const result = await Tesseract.recognize(canvas, 'eng');
             let cleanText = result.data.text.trim().replace(/[^a-zA-Z0-9-_ ]/g, '');
+            
             if (cleanText) {
                 assetInput.value = cleanText;
-                
-                // บันทึกเวลาที่สแกนสำเร็จทันที! (เก็บความละเอียดระดับวินาที)
                 scanTimeInput.value = getFormattedDateTime();
-                
                 statusDiv.innerText = "✅ อ่านสำเร็จ ณ เวลา " + scanTimeInput.value.split(' ')[1];
             } else {
-                statusDiv.innerText = "❌ อ่านไม่ออก ลองขยับกล้องอีกทีครับ";
+                statusDiv.innerText = "❌ ไม่พบตัวอักษรในกรอบ ลองขยับกล้องอีกทีครับ";
             }
         } catch (error) {
             statusDiv.innerText = "เกิดข้อผิดพลาดในการอ่าน";
+            console.error(error);
         }
     }
 
