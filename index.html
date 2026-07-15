@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Notebook (OCR & Safe Delete)</title>
+    <title>Asset Notebook (OCR on Demand)</title>
     <!-- ดึงไลบรารีสแกนตัวอักษร -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- ดึงไลบรารีสำหรับสร้างไฟล์ Excel บนหน้าเว็บ -->
@@ -44,11 +44,27 @@
             width: 100%;
             max-width: 400px;
             margin: 0 auto;
-            background: #000;
+            background: #1a202c; /* พื้นหลังสีเข้มตอนปิดกล้อง */
             border-radius: 8px;
             overflow: hidden;
+            aspect-ratio: 4 / 3; /* ล็อกสัดส่วนช่องกล้องให้คงที่ */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        #video { width: 100%; display: block; }
+        #video { 
+            width: 100%; 
+            height: 100%;
+            object-fit: cover;
+            display: none; /* ซ่อนวิดีโอไว้ก่อนจนกว่าจะเปิดกล้อง */
+        }
+        .camera-placeholder {
+            color: #a0aec0;
+            font-size: 14px;
+            text-align: center;
+            position: absolute;
+            z-index: 1;
+        }
         .scan-region {
             position: absolute;
             top: 42.5%;
@@ -59,6 +75,8 @@
             box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
             pointer-events: none;
             box-sizing: border-box;
+            z-index: 2;
+            display: none; /* ซ่อนกรอบไว้ก่อน */
         }
         .scan-region::after {
             content: "เล็งตัวอักษรให้อยู่ในกรอบนี้";
@@ -142,9 +160,7 @@
             border-radius: 4px;
             font-weight: normal;
         }
-        .btn-delete:hover {
-            background-color: #fff5f5;
-        }
+        .btn-delete:hover { background-color: #fff5f5; }
         
         .log-list { max-height: 280px; overflow-y: auto; margin-top: 10px; }
         .log-item {
@@ -155,15 +171,8 @@
             justify-content: space-between;
             align-items: center;
         }
-        .log-left-content {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .log-info {
-            display: flex;
-            flex-direction: column;
-        }
+        .log-left-content { display: flex; align-items: center; gap: 12px; }
+        .log-info { display: flex; flex-direction: column; }
         .time-info {
             color: #718096;
             font-size: 11px;
@@ -184,58 +193,50 @@
         }
         .status-out { background-color: #fed7d7; color: #9b2c2c; padding: 4px 8px; border-radius: 4px; font-weight: bold; text-align: center; min-width: 60px; }
         .status-in { background-color: #c6f6d5; color: #22543d; padding: 4px 8px; border-radius: 4px; font-weight: bold; text-align: center; min-width: 60px; }
-        .log-right-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .log-right-actions { display: flex; align-items: center; gap: 10px; }
         #canvas { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📝 Asset Notebook + ลบประวัติแม่นยำ</h2>
+    <h2>📝 Asset Notebook (ประหยัดพลังงาน)</h2>
     
     <!-- 1. ส่วนกล้องสแกน -->
     <div class="section">
-        <div class="section-title">📷 ส่องกล้องไปที่รหัสทรัพย์สิน</div>
+        <div class="section-title">📷 สแกนสติกเกอร์ทรัพย์สิน</div>
         <div class="camera-box">
+            <div class="camera-placeholder" id="placeholderText">🔒 กล้องปิดอยู่ กดปุ่มด้านล่างเพื่อสแกน</div>
             <video id="video" autoplay playsinline></video>
-            <div class="scan-region"></div>
+            <div class="scan-region" id="scanRegion"></div>
         </div>
-        <button class="btn-scan" onclick="captureAndRecognize()">📸 กดเพื่อสแกนอ่านคำ</button>
-        <div class="status-text" id="status">สถานะกล้อง: พร้อมใช้งาน</div>
+        <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 กดเพื่อสแกนอ่านคำ</button>
+        <div class="status-text" id="status">สถานะ: พร้อมใช้งาน</div>
     </div>
 
-    <!-- 2. ฟอร์มและปุ่มกดทำรายการ -->
+    <!-- 2. ฟอร์มทำรายการ -->
     <div class="section">
         <div class="section-title">🔄 ระบุรายละเอียดข้อมูล</div>
-        
         <div class="form-group">
             <label for="assetId">รหัสทรัพย์สินที่สแกนได้</label>
             <input type="text" id="assetId" placeholder="ตัวอักษรจะโผล่ที่นี่">
             <input type="hidden" id="lastScanTime" value="">
         </div>
-
         <div class="form-group">
             <label for="cabinetLocation">📦 ตู้เก็บของที่ทำรายการ</label>
             <select id="cabinetLocation">
                 <option value="ตู้ A">ตู้ A</option>
                 <option value="ตู้ B">ตู้ B</option>
                 <option value="ตู้ C">ตู้ C</option>
-                <option value="ตู้ D">ตู้ D</option>
-                <option value="โต๊ะทำงานส่วนตัว">โต๊ะทำงานส่วนตัว</option>
             </select>
         </div>
-        
         <div class="btn-group">
             <button class="btn-checkout" onclick="handleAction('หยิบออก')">📤 หยิบออก</button>
             <button class="btn-checkin" onclick="handleAction('เก็บคืน')">📥 เก็บคืน</button>
         </div>
     </div>
 
-    <!-- 3. ส่วนประวัติและปุ่มโหลด Excel -->
+    <!-- 3. ส่วนประวัติ -->
     <div class="section">
         <div class="section-title">
             <span>📜 ประวัติล่าสุด</span>
@@ -254,59 +255,100 @@
     const assetInput = document.getElementById('assetId');
     const scanTimeInput = document.getElementById('lastScanTime');
     const cabinetSelect = document.getElementById('cabinetLocation');
+    const placeholderText = document.getElementById('placeholderText');
+    const scanRegion = document.getElementById('scanRegion');
+    const scanBtn = document.getElementById('scanBtn');
 
-    // เปิดกล้องหลังอัตโนมัติ
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
-        .then(stream => { video.srcObject = stream; })
-        .catch(err => { statusDiv.innerText = "เปิดกล้องไม่ได้: " + err.message; });
+    let currentStream = null;
 
     function getFormattedDateTime() {
         const now = new Date();
         return now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
     }
 
-    // ฟังก์ชันจับภาพและสแกนเฉพาะกึ่งกลางภาพกล้องจริง
-    async function captureAndRecognize() {
-        statusDiv.innerText = "⏳ กำลังอ่านตัวอักษร...";
+    // ฟังก์ชันหลัก: เริ่มเปิดกล้อง จับภาพ อ่านคำ และปิดกล้องทันที
+    async function startScanProcess() {
+        statusDiv.innerText = "🔌 กำลังเปิดกล้อง...";
+        scanBtn.disabled = true; // บล็อกปุ่มชั่วคราวป้องกันการกดซ้ำ
         assetInput.value = "";
         scanTimeInput.value = "";
-        
-        const ctx = canvas.getContext('2d');
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
-        
-        const cropWidth = 500;
-        const cropHeight = 120;
-        const cropLeft = (videoWidth - cropWidth) / 2;
-        const cropTop = (videoHeight - cropHeight) / 2;
-        
-        canvas.width = cropWidth;
-        canvas.height = cropHeight;
-        ctx.drawImage(video, cropLeft, cropTop, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
         try {
+            // 1. เรียกเปิดใช้กล้องหลัง
+            currentStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' }, 
+                audio: false 
+            });
+            video.srcObject = currentStream;
+            
+            // แสดงหน้าจอวิดีโอและกรอบเล็ง ซ่อนข้อความสัญลักษณ์ปิดกล้อง
+            video.style.display = "block";
+            scanRegion.style.display = "block";
+            placeholderText.style.display = "none";
+            
+            statusDiv.innerText = "⏳ รอโฟกัสและตรวจจับตัวอักษร (กรุณาถือค้างไว้นิ่งๆ)...";
+
+            // 2. ให้เวลากล้องทำงานและปรับแสง 1.2 วินาที ก่อนจะแชะภาพอัตโนมัติ
+            await new Promise(resolve => setTimeout(resolve, 1200));
+
+            // 3. เริ่มทำการครอปตัดภาพกึ่งกลางเลนส์
+            const ctx = canvas.getContext('2d');
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            
+            const cropWidth = 500;
+            const cropHeight = 120;
+            const cropLeft = (videoWidth - cropWidth) / 2;
+            const cropTop = (videoHeight - cropHeight) / 2;
+            
+            canvas.width = cropWidth;
+            canvas.height = cropHeight;
+            ctx.drawImage(video, cropLeft, cropTop, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+            // 4. สั่งปิดกล้องทันทีหลังได้ภาพเพื่อประหยัดแบตเตอรี่!
+            stopCamera();
+
+            // 5. ส่งภาพที่แคปเจอร์ไปส่งให้ AI อ่าน
+            statusDiv.innerText = "🧠 AI กำลังประมวลผลคำ...";
             const result = await Tesseract.recognize(canvas, 'eng');
             let cleanText = result.data.text.trim().replace(/[^a-zA-Z0-9-_ ]/g, '');
+            
             if (cleanText) {
                 assetInput.value = cleanText;
                 scanTimeInput.value = getFormattedDateTime();
-                statusDiv.innerText = "✅ อ่านสำเร็จ ณ เวลา " + scanTimeInput.value.split(' ')[1];
+                statusDiv.innerText = "✅ สแกนสำเร็จ ณ เวลา " + scanTimeInput.value.split(' ')[1];
             } else {
-                statusDiv.innerText = "❌ ไม่พบตัวอักษรในกรอบ ลองขยับกล้องอีกทีครับ";
+                statusDiv.innerText = "❌ อ่านไม่ออก ลองกดใหม่อีกครั้งครับ";
             }
-        } catch (error) {
-            statusDiv.innerText = "เกิดข้อผิดพลาดในการอ่าน";
+
+        } catch (err) {
+            statusDiv.innerText = "เปิดกล้องไม่สำเร็จ: " + err.message;
+            stopCamera();
+        } finally {
+            scanBtn.disabled = false; // ปลดล็อกปุ่มให้กดครั้งต่อไปได้
         }
     }
 
-    // --- ระบบจัดเก็บข้อมูลและส่งออก Excel ---
+    // ฟังก์ชันสำหรับปิดสัญญาณกล้องทั้งหมด
+    function stopCamera() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+        }
+        video.srcObject = null;
+        video.style.display = "none";
+        scanRegion.style.display = "none";
+        placeholderText.style.display = "block";
+    }
+
+    // --- ระบบจัดเก็บข้อมูลและประวัติ ---
     let logs = JSON.parse(localStorage.getItem('myAssetLogs')) || [];
     renderLogs();
 
     function handleAction(actionType) {
         const assetId = assetInput.value.trim();
         if (!assetId) {
-            alert('กรุณาสแกนหรือพิมพ์รหัสทรัพย์สินก่อนครับ');
+            alert('กรุณากดปุ่มสแกนอ่านตัวอักษร หรือพิมพ์รหัสก่อนครับ');
             return;
         }
 
@@ -314,7 +356,6 @@
         const actionTime = getFormattedDateTime();
         const cabinet = cabinetSelect.value;
 
-        // บันทึกข้อมูลแบบปกติ
         logs.unshift({ 
             asset: assetId, 
             action: actionType, 
@@ -325,16 +366,13 @@
         localStorage.setItem('myAssetLogs', JSON.stringify(logs));
         
         renderLogs();
-        
         assetInput.value = '';
         scanTimeInput.value = '';
         statusDiv.innerText = "บันทึกข้อมูลเรียบร้อย";
     }
 
-    // ฟังก์ชันสำหรับลบรายการประวัติโดยอิงตามลำดับ (Index) แถวที่เลือก
     function deleteLog(index) {
         if (confirm("คุณแน่ใจใช่ไหมว่าต้องการลบประวัติรายการนี้?")) {
-            // ลบเฉพาะสมาชิก ณ ลำดับนั้นออก 1 ชิ้น
             logs.splice(index, 1);
             localStorage.setItem('myAssetLogs', JSON.stringify(logs));
             renderLogs();
@@ -347,8 +385,6 @@
             logListElement.innerHTML = '<div style="color:#a0aec0; text-align:center; padding: 10px;">ยังไม่มีประวัติ</div>';
             return;
         }
-        
-        // ส่งค่า index (ลำดับแถวตั้งแต่ 0,1,2...) เข้าไปในฟังก์ชันลบแทน ID ยาวๆ
         logListElement.innerHTML = logs.map((log, index) => `
             <div class="log-item">
                 <div class="log-left-content">
@@ -374,7 +410,6 @@
             alert('ยังไม่มีข้อมูลประวัติให้ดาวน์โหลดครับ');
             return;
         }
-
         const dataForExcel = logs.map((log, index) => ({
             "ลำดับที่": logs.length - index,
             "วัน-เวลาที่สแกนสติกเกอร์": log.scanTime,
@@ -383,14 +418,11 @@
             "ตู้เก็บของ / ตำแหน่ง": log.cabinet || 'ไม่ได้ระบุ',
             "สถานะรายการ": log.action
         }));
-
         const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "ประวัติยืม-คืน");
-
         const today = new Date().toISOString().slice(0,10);
         const filename = `Asset_Notebook_Log_${today}.xlsx`;
-
         XLSX.writeFile(workbook, filename);
     }
 </script>
