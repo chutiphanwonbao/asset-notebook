@@ -18,7 +18,19 @@
         h2 { text-align: center; color: #2c3e50; margin-top: 0; font-style: normal; }
         
         /* 📱 ดีไซน์แถบเมนูนำทาง (Tab Navigation) */
-        .nav-bar { display: flex; background-color: #edf2f7; border-radius: 8px; padding: 4px; margin-bottom: 20px; gap: 4px; }
+        /* 📱 ดีไซน์แถบเมนูนำทาง (Tab Navigation) แบบล็อกติดหน้าจอ */
+        .nav-bar { 
+            display: flex; 
+            background-color: #edf2f7; 
+            border-radius: 8px; 
+            padding: 4px; 
+            margin-bottom: 20px; 
+            gap: 4px; 
+            position: sticky;      /* 📌 คำสั่งเปิดโหมดล็อกติดหนึบ */
+            top: 10px;             /* เว้นระยะห่างจากขอบบนสุดของจอเล็กน้อยเพื่อความสวยงาม */
+            z-index: 100;          /* บังคับให้เมนูลอยอยู่เหนือตัวอักษรและตารางประวัติเวลาเลื่อนจอ */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* เพิ่มเงาจางๆ ให้ดูมีมิติเวลาลอย */
+        }
         .nav-btn { flex: 1; background: none; color: #4a5568; padding: 12px 5px; font-size: 15px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; font-weight: bold; font-family: 'Itim', cursive, sans-serif; }
         .nav-btn.active { background-color: white; color: #2b6cb0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
@@ -102,7 +114,7 @@
                 <video id="video" autoplay playsinline></video>
                 <div class="scan-region" id="scanRegion"></div>
             </div>
-            <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 กดเพื่อสแกนอ่านคำ</button>
+            <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 กดเพื่อสแกน</button>
             <div class="status-text" id="status">สถานะ: รอการเชื่อมต่อ</div>
         </div>
 
