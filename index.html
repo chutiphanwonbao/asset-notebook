@@ -196,7 +196,7 @@
         return now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
     }
 
-    // ฟังก์ชันจับภาพเฉพาะในกรอบที่กำหนด แล้วส่งไปอ่านตัวอักษร
+   // ฟังก์ชันจับภาพแบบล็อกกึ่งกลางวิดีโอจริง (แก้ปัญหาภาพเยื้องไปอ่านคีย์บอร์ด)
     async function captureAndRecognize() {
         statusDiv.innerText = "⏳ กำลังอ่านตัวอักษร...";
         assetInput.value = "";
@@ -204,27 +204,30 @@
         
         const ctx = canvas.getContext('2d');
         
-        // 1. ตั้งค่าขนาดความกว้าง/สูงของคานวาสให้เท่ากับวิดีโอจริงจากกล้อง
+        // 1. ดึงขนาดความละเอียดจริงของตัวกล้อง (ไม่ใช่ขนาดที่แสดงบนหน้าจอ)
         const videoWidth = video.videoWidth;
         const videoHeight = video.videoHeight;
         
-        // 2. คำนวณพิกัดของกรอบเส้นประ (อิงตาม CSS: top 35%, left 10%, width 80%, height 30%)
-        const cropLeft = videoWidth * 0.10;
-        const cropTop = videoHeight * 0.35;
-        const cropWidth = videoWidth * 0.80;
-        const cropHeight = videoHeight * 0.30;
+        // 2. กำหนดขนาดกล่องที่จะครอปตัดภาพเป็นพิกเซลที่แน่นอน (ทรงสติกเกอร์ผืนผ้าแคบเรียว)
+        const cropWidth = 500;  // ความกว้างกล่องสแกน
+        const cropHeight = 120; // ความสูงกล่องสแกน
         
-        // 3. ปรับขนาดคานวาสให้เท่ากับขนาดของ "กรอบครอป" เท่านั้น
+        // 3. คำนวณหาจุดกึ่งกลางของกล้องจริง เพื่อวางกล่องตัดภาพไว้ตรงกลางเป๊ะๆ
+        const cropLeft = (videoWidth - cropWidth) / 2;
+        const cropTop = (videoHeight - cropHeight) / 2;
+        
+        // 4. ปรับขนาดคานวาสให้เท่ากับขนาดกล่องที่เราจะส่งให้ AI อ่าน
         canvas.width = cropWidth;
         canvas.height = cropHeight;
         
-        // 4. วาดภาพลงบนคานวาส โดยตัดเอามาเฉพาะพื้นที่ในกรอบเส้นประ
-        // พารามิเตอร์: ctx.drawImage(ภาพต้นฉบับ, xเริ่มตัด, yเริ่มตัด, กว้างที่ตัด, สูงที่ตัด, xที่วาง, yที่วาง, กว้างที่วาง, สูงที่วาง)
+        // 5. ตัดกระดาษเฉพาะตรงกึ่งกลางเลนส์กล้องมาใช้งาน
         ctx.drawImage(video, cropLeft, cropTop, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
         try {
-            // 5. ส่งเฉพาะภาพที่ถูกตัดในกรอบไปให้ AI ประมวลผล
+            // 6. ส่งภาพที่ตัดตรงกลางไปให้ Tesseract.js อ่านค่า
             const result = await Tesseract.recognize(canvas, 'eng');
+            
+            // ล้างขยะที่เป็นตัวอักษรแปลกๆ ทิ้งไป ดึงเฉพาะข้อความภาษาอังกฤษ ตัวเลข และขีดกลาง
             let cleanText = result.data.text.trim().replace(/[^a-zA-Z0-9-_ ]/g, '');
             
             if (cleanText) {
