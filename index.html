@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Notebook (OCR & Cabinet Tracker with Delete)</title>
+    <title>Asset Notebook (OCR & Safe Delete)</title>
     <!-- ดึงไลบรารีสแกนตัวอักษร -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- ดึงไลบรารีสำหรับสร้างไฟล์ Excel บนหน้าเว็บ -->
@@ -195,7 +195,7 @@
 <body>
 
 <div class="container">
-    <h2>📝 Asset Notebook + ระบบจัดการประวัติ</h2>
+    <h2>📝 Asset Notebook + ลบประวัติแม่นยำ</h2>
     
     <!-- 1. ส่วนกล้องสแกน -->
     <div class="section">
@@ -314,9 +314,8 @@
         const actionTime = getFormattedDateTime();
         const cabinet = cabinetSelect.value;
 
-        // บันทึกข้อมูล (เพิ่ม id เพื่อให้ง่ายต่อการค้นหาและลบ)
+        // บันทึกข้อมูลแบบปกติ
         logs.unshift({ 
-            id: Date.now(), // ใช้ timestamp เป็น unique ID ของรายการนั้นๆ
             asset: assetId, 
             action: actionType, 
             scanTime: scanTime,
@@ -332,11 +331,11 @@
         statusDiv.innerText = "บันทึกข้อมูลเรียบร้อย";
     }
 
-    // ฟังก์ชันสำหรับลบรายการประวัติเฉพาะชิ้น
-    function deleteLog(id) {
+    // ฟังก์ชันสำหรับลบรายการประวัติโดยอิงตามลำดับ (Index) แถวที่เลือก
+    function deleteLog(index) {
         if (confirm("คุณแน่ใจใช่ไหมว่าต้องการลบประวัติรายการนี้?")) {
-            // กรองเอาตัวที่ ID ไม่ตรงออก (เหลือเฉพาะรายการที่ไม่ได้กดลบ)
-            logs = logs.filter(log => log.id !== id);
+            // ลบเฉพาะสมาชิก ณ ลำดับนั้นออก 1 ชิ้น
+            logs.splice(index, 1);
             localStorage.setItem('myAssetLogs', JSON.stringify(logs));
             renderLogs();
         }
@@ -349,7 +348,8 @@
             return;
         }
         
-        logListElement.innerHTML = logs.map(log => `
+        // ส่งค่า index (ลำดับแถวตั้งแต่ 0,1,2...) เข้าไปในฟังก์ชันลบแทน ID ยาวๆ
+        logListElement.innerHTML = logs.map((log, index) => `
             <div class="log-item">
                 <div class="log-left-content">
                     <div class="log-info">
@@ -363,7 +363,7 @@
                 </div>
                 <div class="log-right-actions">
                     <div class="${log.action === 'หยิบออก' ? 'status-out' : 'status-in'}">${log.action}</div>
-                    <button class="btn-delete" onclick="deleteLog(${log.id})">🗑️ ลบ</button>
+                    <button class="btn-delete" onclick="deleteLog(${index})">🗑️ ลบ</button>
                 </div>
             </div>
         `).join('');
