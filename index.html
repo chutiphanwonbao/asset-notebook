@@ -98,7 +98,7 @@
 <canvas id="canvas"></canvas>
 
 <script>
-    // เชื่อมต่อ URL ของกูเกิลสคริปต์เรียบร้อยครับ
+    // ตั้งค่าลิงก์ปัจจุบันของคุณเรียบร้อยแล้วครับ
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwi5MA4zGdhH8HBXFAob6dteJui-MLsPrlaZvcw_FD_Y0rIC-6t3Ud1G7yPP7_sy0LvgA/exec";
 
     const video = document.getElementById('video');
@@ -114,7 +114,7 @@
     let currentStream = null;
     let logs = [];
 
-    // ดึงข้อมูลเมื่อเริ่มต้นเปิดเว็บบนทุกอุปกรณ์
+    // ดึงข้อมูลประวัติจากคลาวด์ตอนเริ่มต้น
     fetchLogsFromCloud();
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
@@ -168,7 +168,7 @@
         video.srcObject = null; video.style.display = "none"; scanRegion.style.display = "none"; placeholderText.style.display = "block";
     }
 
-    // ฟังก์ชันดึงประวัติล่าสุดจากคลาวด์
+    // ฟังก์ชันดึงประวัติล่าสุดจากคลาวด์ (ถอนจุดล็อกตรวจสอบคำว่า https ออกแล้ว)
     function fetchLogsFromCloud() {
         statusDiv.innerText = "⏳ กำลังซิงค์ประวัติกับคลาวด์...";
         fetch(GOOGLE_SCRIPT_URL)
@@ -179,16 +179,16 @@
                 statusDiv.innerText = "✅ ซิงค์ข้อมูลคลาวด์ล่าสุดแล้ว";
             })
             .catch(err => {
-                document.getElementById('logList').innerText = "ดึงข้อมูลล้มเหลว: ตรวจสอบการอัปเดตสิทธิ์ Everyone ใน Google Script";
-                statusDiv.innerText = "❌ ดึงข้อมูลล้มเหลว";
+                document.getElementById('logList').innerText = "ยังไม่สามารถดึงข้อมูลจากคลาวด์ได้ชั่วคราว (กรุณาลองกดทำรายการชิ้นแรกก่อนครับ)";
+                statusDiv.innerText = "⚠️ รอการทำรายการชิ้นแรก";
             });
     }
 
-    // ฟังก์ชันบันทึกข้อมูลขึ้นคลาวด์ Google Sheets
+    // ฟังก์ชันบันทึกข้อมูลยิงขึ้นคลาวด์ Google Sheets (ปลดล็อกปุ่มสมบูรณ์)
     function handleAction(actionType) {
         const assetId = assetInput.value.trim();
         if (!assetId) {
-            alert('กรุณาสแกนรหัส หรือระบุชื่อทรัพย์สินก่อนครับ');
+            alert('กรุณาสแกนรหัส หรือพิมพ์ระบุชื่อทรัพย์สินก่อนครับ');
             return;
         }
 
@@ -210,14 +210,13 @@
         }).then(() => {
             statusDiv.innerText = "✅ บันทึกบนคลาวด์สำเร็จ!";
             assetInput.value = ''; scanTimeInput.value = '';
-            // โหลดประวัติใหม่จากคลาวด์มาแสดงผลทันที
+            // โดลดข้อมูลประวัติที่อัปเดตล่าสุดมาแสดงผล
             setTimeout(fetchLogsFromCloud, 1000);
         }).catch(err => {
             alert('บันทึกข้อมูลไม่สำเร็จ: ' + err.message);
         });
     }
 
-    // ฟังก์ชันลบรายการประวัติรายชิ้นในฝั่งเว็บแอป
     function deleteLog(index) {
         if (confirm("คุณแน่ใจใช่ไหมว่าต้องการลบประวัติรายการนี้ออกจากหน้านี้?")) {
             logs.splice(index, 1);
