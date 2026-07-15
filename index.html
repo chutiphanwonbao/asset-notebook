@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Notebook (Cloud Sync & Multi-Page View)</title>
+    <title>Asset Notebook (Cloud Sync & Live Dashboard & Counters)</title>
     <!-- ดึงฟอนต์ Itim จาก Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +17,6 @@
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         h2 { text-align: center; color: #2c3e50; margin-top: 0; font-style: normal; }
         
-        /* 📱 ดีไซน์แถบเมนูนำทาง (Tab Navigation) */
         /* 📱 ดีไซน์แถบเมนูนำทาง (Tab Navigation) แบบล็อกติดหน้าจอ */
         .nav-bar { 
             display: flex; 
@@ -26,10 +25,10 @@
             padding: 4px; 
             margin-bottom: 20px; 
             gap: 4px; 
-            position: sticky;      /* 📌 คำสั่งเปิดโหมดล็อกติดหนึบ */
-            top: 10px;             /* เว้นระยะห่างจากขอบบนสุดของจอเล็กน้อยเพื่อความสวยงาม */
-            z-index: 100;          /* บังคับให้เมนูลอยอยู่เหนือตัวอักษรและตารางประวัติเวลาเลื่อนจอ */
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* เพิ่มเงาจางๆ ให้ดูมีมิติเวลาลอย */
+            position: sticky;      
+            top: 10px;             
+            z-index: 100;          
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
         }
         .nav-btn { flex: 1; background: none; color: #4a5568; padding: 12px 5px; font-size: 15px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; font-weight: bold; font-family: 'Itim', cursive, sans-serif; }
         .nav-btn.active { background-color: white; color: #2b6cb0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -68,7 +67,15 @@
         .search-box { display: flex; gap: 8px; margin-bottom: 12px; }
         .search-input { text-align: left; font-size: 15px; padding: 10px; color: #333; }
         .filter-select { font-size: 15px; padding: 10px; height: 100%; width: 100%; }
-        .summary-grid { display: grid; grid-template-columns: 1fr; gap: 10px; max-height: 480px; overflow-y: auto; margin-top: 10px; padding-right: 5px; }
+        
+        /* 📊 สไตล์ใหม่สำหรับกล่องนับยอดสะสม */
+        .counter-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        .counter-card { background: white; border: 1px solid #e2e8f0; padding: 8px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .counter-val { font-size: 22px; font-weight: bold; color: #2b6cb0; margin-bottom: 2px; }
+        .counter-label { font-size: 11px; color: #718096; font-weight: bold; }
+        .search-result-count { font-size: 13px; color: #4a5568; font-weight: bold; margin-bottom: 10px; padding-left: 4px; }
+
+        .summary-grid { display: grid; grid-template-columns: 1fr; gap: 10px; max-height: 380px; overflow-y: auto; margin-top: 5px; padding-right: 5px; }
         .summary-card { background-color: #f8fafc; border: 1px solid #edf2f7; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
         .badge-cabinet { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
         .badge-checkout { background-color: #fff5f5; color: #c53030; border: 1px solid #fed7d7; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
@@ -114,7 +121,7 @@
                 <video id="video" autoplay playsinline></video>
                 <div class="scan-region" id="scanRegion"></div>
             </div>
-            <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 กดเพื่อสแกน</button>
+            <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 กดเพื่อสแกนอ่านคำ</button>
             <div class="status-text" id="status">สถานะ: รอการเชื่อมต่อ</div>
         </div>
 
@@ -123,7 +130,7 @@
             <div class="section-title">🔄 ระบุรายละเอียดข้อมูล</div>
             <div class="form-group">
                 <label for="assetId">รหัสทรัพย์สินที่สแกนได้</label>
-                <input type="text" id="assetId" placeholder="Asset Number IT">
+                <input type="text" id="assetId" placeholder="ตัวอักษรจะโผล่ที่นี่">
                 <input type="hidden" id="lastScanTime" value="">
             </div>
             <div class="form-group">
@@ -133,7 +140,7 @@
                     <option value="ตู้ B">ตู้ B</option>
                     <option value="ตู้ C">ตู้ C</option>
                     <option value="โต๊ะทำงานส่วนตัว">โต๊ะทำงานส่วนตัว</option>
-                    <option value="อื่นๆ">อื่นๆ (ระบุหมายเหตุด้านล่าง)</option>
+                    <option value="อื่นๆ">อื่นๆ (ระบุหมายเหตุน้านล่าง)</option>
                 </select>
                 <input type="text" id="customNote" class="note-input" placeholder="พิมพ์ระบุตำแหน่ง หรือชื่อคนยืม เช่น: ตู้ E / ช่างเอกยืม">
             </div>
@@ -151,6 +158,22 @@
         <div class="section" style="background-color: #f8fafc; border: 2px solid #edf2f7; min-height: 400px;">
             <div class="section-title" style="color: #2b6cb0;">📊 สรุปตำแหน่งปัจจุบันแต่ละชิ้น</div>
             
+            <!-- 📊 แผงนับยอดสรุปอัตโนมัติ (เพิ่มใหม่สำหรับนับของ) -->
+            <div class="counter-container">
+                <div class="counter-card" style="border-top: 4px solid #4a5568;">
+                    <div class="counter-val" id="count-total">0</div>
+                    <div class="counter-label">ของทั้งหมด</div>
+                </div>
+                <div class="counter-card" style="border-top: 4px solid #38a169;">
+                    <div class="counter-val" id="count-instock" style="color: #2f855a;">0</div>
+                    <div class="counter-label">พร้อมใช้ในตู้</div>
+                </div>
+                <div class="counter-card" style="border-top: 4px solid #e53e3e;">
+                    <div class="counter-val" id="count-out" style="color: #c53030;">0</div>
+                    <div class="counter-label">โดนหยิบออก</div>
+                </div>
+            </div>
+
             <!-- ค้นหา & ตัวกรองตู้ -->
             <div class="search-box">
                 <input type="text" id="searchAsset" class="search-input" placeholder="🔍 ค้นหารหัสทรัพย์สิน..." oninput="updateDashboard()">
@@ -164,6 +187,9 @@
                     <option value="OUT">📤 ถูกหยิบออกไปแล้ว</option>
                 </select>
             </div>
+
+            <!-- ข้อความแสดงยอดผลลัพธ์จากการค้นหา -->
+            <div class="search-result-count" id="searchResultCount">ผลการค้นหา: 0 ชิ้น</div>
 
             <!-- รายชื่อการ์ดสรุปปัจจุบัน -->
             <div class="summary-grid" id="summaryGrid">
@@ -213,20 +239,16 @@
         .then(stream => { stream.getTracks().forEach(t => t.stop()); statusDiv.innerText = "สถานะ: เชื่อมต่อระบบกล้องสำเร็จ"; })
         .catch(err => { statusDiv.innerText = "เตือน: โหมดแสดงผลประวัติอย่างเดียว (ไม่ได้ต่อกล้อง)"; });
 
-    // 🌟 ฟังก์ชันจัดการสลับหน้าจอเว็บแบบสมูท
     function switchPage(pageId) {
-        // 1. ซ่อนทุกหน้าจอ
         document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-        // 2. แสดงหน้าจอที่เราเลือก
         document.getElementById(pageId).classList.add('active');
 
-        // 3. ปรับสถานะปุ่มเมนูนำทางให้เป็นตัวหนา/สีฟ้าตามหน้าที่เปิด
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
         if (pageId === 'scan-page') {
             document.getElementById('btn-scan').classList.add('active');
         } else if (pageId === 'summary-page') {
             document.getElementById('btn-summary').classList.add('active');
-            updateDashboard(); // 🔄 รีเฟรชสถานะทรัพย์สินให้เป็นล่าสุดเสมอเวลาเข้าหน้านี้
+            updateDashboard(); 
         } else if (pageId === 'history-page') {
             document.getElementById('btn-history').classList.add('active');
         }
@@ -393,7 +415,7 @@
         }
     }
 
-    // 🌟 ฟังก์ชันสรุปสถานะปัจจุบันแบบมีแถบเมนู
+    // 🌟 ฟังก์ชันคำนวณสรุป และตัวกรองยอดสะสมคลังปัจจุบัน
     function updateDashboard() {
         const summaryGrid = document.getElementById('summaryGrid');
         const searchVal = document.getElementById('searchAsset').value.trim().toLowerCase();
@@ -425,31 +447,47 @@
             }
         });
 
-        let assetList = Object.values(currentAssets);
+        // รายชื่อทรัพย์สินปัจจุบันทั้งหมดแบบเป็นทางการ (ตัวเลขสรุปจะอิงตามข้อมูลจริงก้อนนี้ก่อนโดนตัวหนังสือกรอง)
+        const assetListBase = Object.values(currentAssets);
 
-        // 🔍 ตัวกรองค้นหาตัวหนังสือ
+        // 🧠 1. คำนวณตัวเลขสถิติของ "ทั้งหมด" ในระบบ ณ ขณะนั้น
+        let totalCount = assetListBase.length;
+        let outCount = assetListBase.filter(item => item.status === "หยิบออก").length;
+        let instockCount = totalCount - outCount;
+
+        // นำค่าไปยัดแสดงบนกล่องสถิติเรียลไทม์
+        document.getElementById('count-total').innerText = totalCount;
+        document.getElementById('count-instock').innerText = instockCount;
+        document.getElementById('count-out').innerText = outCount;
+
+        // 🔍 2. ทำการกรองด้วยกล่องข้อความค้นหา และ ดรอปดาวน์
+        let filteredList = assetListBase;
+
         if (searchVal) {
-            assetList = assetList.filter(item => item.asset.toLowerCase().includes(searchVal));
+            filteredList = filteredList.filter(item => item.asset.toLowerCase().includes(searchVal));
         }
 
-        // 📦 ตัวกรองตำแหน่งตู้
         if (filterVal !== "ALL") {
             if (filterVal === "OUT") {
-                assetList = assetList.filter(item => item.status === "หยิบออก");
+                filteredList = filteredList.filter(item => item.status === "หยิบออก");
             } else if (filterVal === "อื่นๆ") {
-                assetList = assetList.filter(item => item.status !== "หยิบออก" && item.cabinet.includes("อื่นๆ"));
+                filteredList = filteredList.filter(item => item.status !== "หยิบออก" && item.cabinet.includes("อื่นๆ"));
             } else {
-                assetList = assetList.filter(item => item.status !== "หยิบออก" && item.cabinet === filterVal);
+                filteredList = filteredList.filter(item => item.status !== "หยิบออก" && item.cabinet === filterVal);
             }
         }
 
-        if (assetList.length === 0) {
+        // 📍 3. รายงานยอดค้นหาปัจจุบัน (ผลลัพธ์การกรอง)
+        document.getElementById('searchResultCount').innerText = `ผลการค้นหา: ${filteredList.length} ชิ้น`;
+
+        // 4. บรรเลงสแกนวาดการ์ดสรุปรายการทรัพย์สินปัจจุบัน
+        if (filteredList.length === 0) {
             summaryGrid.innerHTML = '<div style="color:#a0aec0; text-align:center; padding: 10px;">🔎 ไม่พบข้อมูลทรัพย์สินที่ตรงตามเงื่อนไข</div>';
             return;
         }
 
-        summaryGrid.innerHTML = assetList.map(item => {
-            const isOut = (item.status === "หยิบออก");
+        summaryGrid.innerHTML = filteredList.map(item => {
+            const isOut = (item.status === "หยิบout" || item.status === "หยิบออก");
             return `
                 <div class="summary-card" style="${isOut ? 'border-left: 5px solid #fc8181;' : 'border-left: 5px solid #68d391;'}">
                     <div>
