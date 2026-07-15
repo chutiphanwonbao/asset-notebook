@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Notebook (Cloud Sync & Custom Notes)</title>
+    <title>Asset Notebook (Cloud Sync & Auto ID & Security Block)</title>
     <!-- ดึงฟอนต์ Itim จาก Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +28,6 @@
         input, select { font-family: 'Itim', cursive, sans-serif; width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-weight: bold; }
         input { text-align: center; color: #2b6cb0; font-size: 18px; }
         
-        /* สไตล์พิเศษสำหรับกล่องระบุหมายเหตุ */
         .note-input { display: none; margin-top: 10px; background-color: #fffaf0; border: 2px solid #fbd38d; color: #dd6b20; text-align: left; font-size: 16px; }
         .note-input::placeholder { color: #cbd5e0; font-weight: normal; }
         
@@ -43,12 +42,18 @@
         .btn-delete { background-color: #fff; border: 1px solid #e53e3e; color: #e53e3e; padding: 6px 10px; font-size: 12px; border-radius: 4px; font-weight: normal; }
         .btn-delete:hover { background-color: #fff5f5; }
         
-        .log-list { max-height: 350px; overflow-y: auto; margin-top: 10px; }
+        .log-list { max-height: 380px; overflow-y: auto; margin-top: 10px; }
         .log-item { padding: 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .log-left-content { display: flex; align-items: center; gap: 12px; flex: 1; }
         .log-info { display: flex; flex-direction: column; width: 100%; }
+        .run-number-badge { font-size: 11px; background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; padding: 2px 6px; border-radius: 4px; width: fit-content; font-weight: bold; margin-bottom: 4px; }
         .time-info { color: #718096; font-size: 11px; margin-top: 4px; line-height: 1.4; }
         .log-cabinet-select { width: auto; max-width: 170px; padding: 4px 6px; font-size: 12px; border: 1px solid #cbd5e0; background-color: #fff; border-radius: 4px; display: inline-block; margin-top: 4px; cursor: pointer; height: auto; }
+        
+        /* สไตล์สำหรับกล่อง Dropdown ที่โดนบล็อกการแก้ไข */
+        .log-cabinet-select:disabled { background-color: #edf2f7; color: #a0aec0; border: 1px solid #e2e8f0; cursor: not-allowed; }
+        .lock-warning-text { font-size: 11px; color: #e53e3e; font-weight: bold; margin-top: 4px; display: block; }
+        
         .status-out { background-color: #fed7d7; color: #9b2c2c; padding: 4px 8px; border-radius: 4px; font-weight: bold; text-align: center; min-width: 60px; }
         .status-in { background-color: #c6f6d5; color: #22543d; padding: 4px 8px; border-radius: 4px; font-weight: bold; text-align: center; min-width: 60px; }
         .log-right-actions { display: flex; align-items: center; gap: 10px; }
@@ -68,7 +73,7 @@
             <video id="video" autoplay playsinline></video>
             <div class="scan-region" id="scanRegion"></div>
         </div>
-        <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 สแกน</button>
+        <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 กดเพื่อสแกนอ่านคำ</button>
         <div class="status-text" id="status">สถานะ: รอการเชื่อมต่อ</div>
     </div>
 
@@ -82,7 +87,6 @@
         </div>
         <div class="form-group">
             <label for="cabinetLocation">📦 ตำแหน่งจัดเก็บทรัพย์สิน</label>
-            <!-- 🔄 เปลี่ยนตัวเลือก ตู้ D ให้กลายเป็น "อื่นๆ" เรียบร้อยครับ -->
             <select id="cabinetLocation" onchange="toggleMainNoteInput()">
                 <option value="ตู้ A">ตู้ A</option>
                 <option value="ตู้ B">ตู้ B</option>
@@ -90,7 +94,6 @@
                 <option value="โต๊ะทำงานส่วนตัว">โต๊ะทำงานส่วนตัว</option>
                 <option value="อื่นๆ">อื่นๆ (ระบุหมายเหตุด้านล่าง)</option>
             </select>
-            <!-- ✏️ ช่องพิมพ์ระบุหมายเหตุเพิ่มเติมกรณีเลือก อื่นๆ -->
             <input type="text" id="customNote" class="note-input" placeholder="พิมพ์ระบุตำแหน่ง หรือชื่อคนยืม เช่น: ตู้ E / ช่างเอกยืม">
         </div>
         <div class="btn-group">
@@ -128,7 +131,6 @@
     let currentStream = null;
     let logs = [];
 
-    // รายชื่อตู้สำหรับระบบ Dropdown
     const cabinetOptions = ["ตู้ A", "ตู้ B", "ตู้ C", "โต๊ะทำงานส่วนตัว", "อื่นๆ"];
 
     fetchLogsFromCloud();
@@ -142,7 +144,6 @@
         return now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
     }
 
-    // เปิด-ปิดการแสดงผลกล่องหมายเหตุในฟอร์มหลัก
     function toggleMainNoteInput() {
         if (cabinetSelect.value === "อื่นๆ") {
             customNoteInput.style.display = "block";
@@ -205,8 +206,8 @@
                 statusDiv.innerText = "✅ ซิงค์ข้อมูลคลาวด์ล่าสุดแล้ว";
             })
             .catch(err => {
-                document.getElementById('logList').innerText = "ยังไม่สามารถดึงข้อมูลได้ชั่วคราว (กรุณาลองกดทำรายการชิ้นแรกก่อนครับ)";
-                statusDiv.innerText = "⚠️ รอการทำรายการชิ้นแรก";
+                document.getElementById('logList').innerText = "ยังไม่สามารถดึงข้อมูลได้ชั่วคราว";
+                statusDiv.innerText = "⚠️ รอการเชื่อมต่อสำเร็จ";
             });
     }
 
@@ -218,7 +219,6 @@
         }
 
         let finalCabinetValue = cabinetSelect.value;
-        // ถ้าเลือกอื่นๆ ให้นำข้อความในช่องหมายเหตุมาต่อท้ายเพื่อส่งขึ้นชีท
         if (finalCabinetValue === "อื่นๆ") {
             const noteText = customNoteInput.value.trim();
             if (!noteText) {
@@ -248,27 +248,24 @@
             assetInput.value = ''; scanTimeInput.value = ''; customNoteInput.value = '';
             customNoteInput.style.display = "none";
             cabinetSelect.value = "ตู้ A";
-            setTimeout(fetchLogsFromCloud, 1000);
+            setTimeout(fetchLogsFromCloud, 1200);
         }).catch(err => {
             alert('บันทึกข้อมูลไม่สำเร็จ: ' + err.message);
         });
     }
 
-    // ฟังก์ชันอัปเดตตำแหน่งตู้ย้อนหลังผ่านตารางประวัติ
     function handleHistoryCabinetChange(id, selectElement) {
         let newCabinetValue = selectElement.value;
-        
         if (newCabinetValue === "อื่นๆ") {
             const userNote = prompt("กรุณาระบุหมายเหตุเพิ่มเติมสำหรับรายการนี้:");
             if (userNote === null) { 
-                fetchLogsFromCloud(); // ยกเลิกการเลือก ให้คืนค่าเดิมกลับมาแสดงผล
+                fetchLogsFromCloud(); 
                 return; 
             }
             if (userNote.trim() !== "") {
                 newCabinetValue = `อื่นๆ (${userNote.trim()})`;
             }
         }
-        
         updateCabinetInCloud(id, newCabinetValue);
     }
 
@@ -277,23 +274,23 @@
         statusDiv.innerText = "🔄 กำลังอัปเดตตำแหน่งตู้บนคลาวด์...";
         
         fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST', // ใช้ POST เสมอเพื่อความชัวร์ในการคุยกับกูเกิล
+            method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                actionType: 'UPDATE', // ⚠️ ใช้ตัวพิมพ์ใหญ่ให้ตรงกับใน Google Script เป๊ะๆ
+                actionType: 'UPDATE',
                 id: String(id),
                 cabinet: newCabinetValue
             })
         }).then(() => {
-            statusDiv.innerText = "✅ บันทึกการแก้ไขลงคลาวด์แล้ว!";
-            // 🔄 สั่งโหลดประวัติใหม่จากคลาวด์มาแสดงผล เพื่อเช็กว่าค่าใน Sheet เปลี่ยนจริงไหม
+            statusDiv.innerText = "✅ อัปเดตข้อมูลบนคลาวด์สำเร็จ!";
             setTimeout(fetchLogsFromCloud, 1200);
         }).catch(err => {
             alert('ไม่สามารถอัปเดตข้อมูลบนคลาวด์ได้: ' + err.message);
             fetchLogsFromCloud();
         });
     }
+
     function deleteLog(index) {
         if (confirm("คุณแน่ใจใช่ไหมว่าต้องการลบประวัติรายการนี้ออกจากหน้านี้?")) {
             logs.splice(index, 1);
@@ -312,7 +309,6 @@
             let isCustomValue = true;
             let matchedOption = "อื่นๆ";
             
-            // ตรวจสอบว่าค่าวาดในคลาวด์ตรงกับตัวเลือกหลักตัวไหนไหม
             cabinetOptions.forEach(opt => {
                 if (log.cabinet === opt) {
                     isCustomValue = false;
@@ -320,29 +316,42 @@
                 }
             });
 
-            // สร้าง Dropdown ในประวัติย้อนหลัง
             const selectOptionsHtml = cabinetOptions.map(opt => {
                 const isSelected = (matchedOption === opt) ? 'selected' : '';
-                // หากตัวเลือกเป็นอื่นๆ และค่าปัจจุบันมีหมายเหตุผสมอยู่ ให้โชว์ข้อความจริงกำกับไว้เลย
                 const displayText = (opt === "อื่นๆ" && isCustomValue) ? `📍 ${log.cabinet}` : `📍 ${opt}`;
                 return `<option value="${opt}" ${isSelected}>${displayText}</option>`;
             }).join('');
+
+            // 🌟 เงื่อนไขล็อกความปลอดภัยข้อที่ 1: ตรวจจับว่าประวัติแถวนี้สถานะคือ "หยิบออก" หรือไม่
+            const isCheckedOut = (log.action === "หยิบออก");
+            
+            // 🌟 เงื่อนไขล็อกความปลอดภัยข้อที่ 2: หรือเป็นแถว Log ที่บันทึกการแก้ไขตู้ไปแล้ว ก็จะไม่ให้มาแก้ตู้ทับซ้ำตรงนี้
+            const isLogEditRow = log.action.includes("แก้ไขตู้");
+            
+            // นำผลลัพธ์การบล็อกมารวมกัน หากเข้าเงื่อนไขข้อใดข้อหนึ่ง จะสั่งปิดใช้งาน Dropdown ทันที
+            const shouldDisable = (isCheckedOut || isLogEditRow);
 
             return `
                 <div class="log-item">
                     <div class="log-left-content">
                         <div class="log-info">
+                            <div class="run-number-badge">🔢 ID: ${log.id || 'ไม่มีรหัส'}</div>
                             <strong>${log.asset}</strong> 
                             <div>
-                                <select class="log-cabinet-select" onchange="handleHistoryCabinetChange('${log.id}', this)">
+                                <!-- 🔐 หากเป็นรายการหยิบออก หรือแถวประวัติแก้ตู้ ตัวเลือกตู้จะถูกเพิ่มคุณสมบัติ disabled (ล็อกตายตัว) ทันที -->
+                                <select class="log-cabinet-select" ${shouldDisable ? 'disabled' : ''} onchange="handleHistoryCabinetChange('${log.id}', this)">
                                     ${selectOptionsHtml}
                                 </select>
+                                <!-- 🔴 แสดงข้อความคำเตือนสีแดงเตือนสติผู้ใช้เมื่อกล่องเลือกตู้โดนล็อก -->
+                                ${isCheckedOut ? `<span class="lock-warning-text">⚠️ ล็อก: ต้องทำการเก็บคืนของก่อนจึงจะย้ายตู้ได้</span>` : ''}
                             </div>
                             <div class="time-info">📸 สแกน: ${log.scanTime}<br>⚡ ทำรายการ: ${log.actionTime}</div>
                         </div>
                     </div>
                     <div class="log-right-actions">
-                        <div class="${log.action === 'หยิบออก' ? 'status-out' : 'status-in'}">${log.action}</div>
+                        <div class="${log.action === 'หยิบออก' ? 'status-out' : (log.action === 'เก็บคืน' ? 'status-in' : 'status-out')}" style="${isLogEditRow ? 'background-color:#e2e8f0; color:#4a5568;' : ''}">
+                            ${log.action}
+                        </div>
                         <button class="btn-delete" onclick="deleteLog(${index})">🗑️ ลบ</button>
                     </div>
                 </div>
@@ -356,10 +365,10 @@
             return;
         }
         const dataForExcel = logs.map((log, index) => ({
-            "ลำดับที่": logs.length - index,
             "วัน-เวลาที่สแกนสติกเกอร์": log.scanTime,
             "วัน-เวลาที่กดทำรายการ": log.actionTime,
             "รหัส / ชื่อทรัพย์สิน": log.asset,
+            "ไอดีข้อมูล": log.id || 'ไม่มีรหัส',
             "ตู้เก็บของ / ตำแหน่ง": log.cabinet || 'ไม่ได้ระบุ',
             "สถานะรายการ": log.action
         }));
