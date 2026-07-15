@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Notebook (OCR & Cabinet Tracker)</title>
+    <title>Asset Notebook (OCR & Cabinet Tracker with Delete)</title>
     <!-- ดึงไลบรารีสแกนตัวอักษร -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- ดึงไลบรารีสำหรับสร้างไฟล์ Excel บนหน้าเว็บ -->
@@ -133,8 +133,20 @@
             padding: 6px 12px; 
             border-radius: 4px;
         }
+        .btn-delete {
+            background-color: #fff;
+            border: 1px solid #e53e3e;
+            color: #e53e3e;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            font-weight: normal;
+        }
+        .btn-delete:hover {
+            background-color: #fff5f5;
+        }
         
-        .log-list { max-height: 250px; overflow-y: auto; margin-top: 10px; }
+        .log-list { max-height: 280px; overflow-y: auto; margin-top: 10px; }
         .log-item {
             padding: 10px 12px;
             border-bottom: 1px solid #edf2f7;
@@ -142,6 +154,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+        .log-left-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .log-info {
+            display: flex;
+            flex-direction: column;
         }
         .time-info {
             color: #718096;
@@ -159,16 +180,22 @@
             display: inline-block;
             margin-top: 4px;
             border: 1px solid #cbd5e0;
+            width: fit-content;
         }
-        .status-out { background-color: #fed7d7; color: #9b2c2c; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .status-in { background-color: #c6f6d5; color: #22543d; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .status-out { background-color: #fed7d7; color: #9b2c2c; padding: 4px 8px; border-radius: 4px; font-weight: bold; text-align: center; min-width: 60px; }
+        .status-in { background-color: #c6f6d5; color: #22543d; padding: 4px 8px; border-radius: 4px; font-weight: bold; text-align: center; min-width: 60px; }
+        .log-right-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
         #canvas { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📝 Asset Notebook + บันทึกตู้เก็บของ</h2>
+    <h2>📝 Asset Notebook + ระบบจัดการประวัติ</h2>
     
     <!-- 1. ส่วนกล้องสแกน -->
     <div class="section">
@@ -197,6 +224,8 @@
                 <option value="ตู้ A">ตู้ A</option>
                 <option value="ตู้ B">ตู้ B</option>
                 <option value="ตู้ C">ตู้ C</option>
+                <option value="ตู้ D">ตู้ D</option>
+                <option value="โต๊ะทำงานส่วนตัว">โต๊ะทำงานส่วนตัว</option>
             </select>
         </div>
         
@@ -283,10 +312,11 @@
 
         const scanTime = scanTimeInput.value || getFormattedDateTime();
         const actionTime = getFormattedDateTime();
-        const cabinet = cabinetSelect.value; // ดึงค่าตู้ที่เลือก
+        const cabinet = cabinetSelect.value;
 
-        // บันทึกข้อมูลเพิ่มฟิลด์ตู้เก็บของ (cabinet)
+        // บันทึกข้อมูล (เพิ่ม id เพื่อให้ง่ายต่อการค้นหาและลบ)
         logs.unshift({ 
+            id: Date.now(), // ใช้ timestamp เป็น unique ID ของรายการนั้นๆ
             asset: assetId, 
             action: actionType, 
             scanTime: scanTime,
@@ -302,23 +332,39 @@
         statusDiv.innerText = "บันทึกข้อมูลเรียบร้อย";
     }
 
+    // ฟังก์ชันสำหรับลบรายการประวัติเฉพาะชิ้น
+    function deleteLog(id) {
+        if (confirm("คุณแน่ใจใช่ไหมว่าต้องการลบประวัติรายการนี้?")) {
+            // กรองเอาตัวที่ ID ไม่ตรงออก (เหลือเฉพาะรายการที่ไม่ได้กดลบ)
+            logs = logs.filter(log => log.id !== id);
+            localStorage.setItem('myAssetLogs', JSON.stringify(logs));
+            renderLogs();
+        }
+    }
+
     function renderLogs() {
         const logListElement = document.getElementById('logList');
         if (logs.length === 0) {
             logListElement.innerHTML = '<div style="color:#a0aec0; text-align:center; padding: 10px;">ยังไม่มีประวัติ</div>';
             return;
         }
+        
         logListElement.innerHTML = logs.map(log => `
             <div class="log-item">
-                <div>
-                    <strong>${log.asset}</strong> 
-                    <div class="cabinet-badge">📍 ${log.cabinet || 'ไม่ได้ระบุ'}</div>
-                    <div class="time-info">
-                        📸 สแกนเมื่อ: ${log.scanTime}<br>
-                        ⚡ ทำรายการ: ${log.actionTime}
+                <div class="log-left-content">
+                    <div class="log-info">
+                        <strong>${log.asset}</strong> 
+                        <div class="cabinet-badge">📍 ${log.cabinet || 'ไม่ได้ระบุ'}</div>
+                        <div class="time-info">
+                            📸 สแกน: ${log.scanTime}<br>
+                            ⚡ ทำรายการ: ${log.actionTime}
+                        </div>
                     </div>
                 </div>
-                <div class="${log.action === 'หยิบออก' ? 'status-out' : 'status-in'}">${log.action}</div>
+                <div class="log-right-actions">
+                    <div class="${log.action === 'หยิบออก' ? 'status-out' : 'status-in'}">${log.action}</div>
+                    <button class="btn-delete" onclick="deleteLog(${log.id})">🗑️ ลบ</button>
+                </div>
             </div>
         `).join('');
     }
@@ -329,7 +375,6 @@
             return;
         }
 
-        // เพิ่มคอลัมน์ตำแหน่งตู้เก็บของลงในไฟล์ Excel
         const dataForExcel = logs.map((log, index) => ({
             "ลำดับที่": logs.length - index,
             "วัน-เวลาที่สแกนสติกเกอร์": log.scanTime,
