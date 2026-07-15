@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Notebook (OCR & Scan Time Tracker)</title>
+    <!-- ดึงไลบรารีสแกนตัวอักษร -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- ดึงไลบรารีสำหรับสร้างไฟล์ Excel บนหน้าเว็บ -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fb;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h2 { text-align: center; color: #2c3e50; margin-top: 0; }
+        .section {
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4a5568;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .camera-box {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #video { width: 100%; display: block; }
+        .scan-region {
+            position: absolute;
+            top: 35%;
+            left: 10%;
+            width: 80%;
+            height: 30%;
+            border: 3px dashed #3182ce;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+        .scan-region::after {
+            content: "เล็งตัวอักษรให้อยู่ในกรอบนี้";
+            position: absolute;
+            bottom: -25px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: #fff;
+            font-size: 12px;
+            background: rgba(0,0,0,0.7);
+            padding: 2px 0;
+        }
+        .status-text {
+            text-align: center;
+            font-size: 14px;
+            color: #718096;
+            margin: 8px 0;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #cbd5e0;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            color: #2b6cb0;
+        }
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        .btn-scan { background-color: #3182ce; color: white; width: 100%; margin-top: 10px; }
+        .btn-checkout { background-color: #e53e3e; color: white; }
+        .btn-checkin { background-color: #38a169; color: white; }
+        .btn-excel { 
+            background-color: #107c41; 
+            color: white; 
+            font-size: 12px; 
+            padding: 6px 12px; 
+            border-radius: 4px;
+        }
+        
+        .log-list { max-height: 250px; overflow-y: auto; margin-top: 10px; }
+        .log-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .time-info {
+            color: #718096;
+            font-size: 11px;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .status-out { background-color: #fed7d7; color: #9b2c2c; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .status-in { background-color: #c6f6d5; color: #22543d; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        #canvas { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📝 Asset Notebook + บันทึกเวลาสแกน</h2>
+    
+    <!-- 1. ส่วนกล้องสแกน -->
+    <div class="section">
+        <div class="section-title">📷 ส่องกล้องไปที่รหัสทรัพย์สิน</div>
+        <div class="camera-box">
+            <video id="video" autoplay playsinline></video>
+            <div class="scan-region"></div>
+        </div>
+        <button class="btn-scan" onclick="captureAndRecognize()">📸 กดเพื่อสแกนอ่านคำ</button>
+        <div class="status-text" id="status">สถานะกล้อง: พร้อมใช้งาน</div>
+    </div>
+
+    <!-- 2. ฟอร์มและปุ่มกดทำรายการ -->
+    <div class="section">
+        <div class="section-title">🔄 ข้อความที่อ่านได้ / ทำรายการ</div>
+        <input type="text" id="assetId" placeholder="ตัวอักษรจะโผล่ที่นี่ (หรือพิมพ์เองได้)">
+        <!-- ซ่อนฟิลด์สำหรับเก็บเวลาที่สแกนล่าสุดไว้ทำงานหลังบ้าน -->
+        <input type="hidden" id="lastScanTime" value="">
+        
+        <div class="btn-group">
+            <button class="btn-checkout" onclick="handleAction('หยิบออก')">📤 หยิบออก</button>
+            <button class="btn-checkin" onclick="handleAction('เก็บคืน')">📥 เก็บคืน</button>
+        </div>
+    </div>
+
+    <!-- 3. ส่วนประวัติและปุ่มโหลด Excel -->
+    <div class="section">
+        <div class="section-title">
+            <span>📜 ประวัติล่าสุด</span>
+            <button class="btn-excel" onclick="exportToExcel()">🟢 ดาวน์โหลดเป็น Excel</button>
+        </div>
+        <div class="log-list" id="logList"></div>
+    </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const statusDiv = document.getElementById('status');
+    const assetInput = document.getElementById('assetId');
+    const scanTimeInput = document.getElementById('lastScanTime');
+
+    // เปิดกล้องหลังอัตโนมัติ
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+        .then(stream => { video.srcObject = stream; })
+        .catch(err => { statusDiv.innerText = "เปิดกล้องไม่ได้: " + err.message; });
+
+    // ฟังก์ชันจัดรูปแบบวันเวลาให้เป็นระเบียบ
+    function getFormattedDateTime() {
+        const now = new Date();
+        return now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+    }
+
+    // ฟังก์ชันจับภาพและสแกนตัวอักษร (OCR)
+    async function captureAndRecognize() {
+        statusDiv.innerText = "⏳ กำลังอ่านตัวอักษร...";
+        assetInput.value = "";
+        scanTimeInput.value = ""; // รีเซ็ตค่าเวลาสแกนก่อนหน้า
+        
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        try {
+            const result = await Tesseract.recognize(canvas, 'eng');
+            let cleanText = result.data.text.trim().replace(/[^a-zA-Z0-9-_ ]/g, '');
+            if (cleanText) {
+                assetInput.value = cleanText;
+                
+                // บันทึกเวลาที่สแกนสำเร็จทันที! (เก็บความละเอียดระดับวินาที)
+                scanTimeInput.value = getFormattedDateTime();
+                
+                statusDiv.innerText = "✅ อ่านสำเร็จ ณ เวลา " + scanTimeInput.value.split(' ')[1];
+            } else {
+                statusDiv.innerText = "❌ อ่านไม่ออก ลองขยับกล้องอีกทีครับ";
+            }
+        } catch (error) {
+            statusDiv.innerText = "เกิดข้อผิดพลาดในการอ่าน";
+        }
+    }
+
+    // --- ระบบจัดเก็บข้อมูลและส่งออก Excel ---
+    let logs = JSON.parse(localStorage.getItem('myAssetLogs')) || [];
+    renderLogs();
+
+    function handleAction(actionType) {
+        const assetId = assetInput.value.trim();
+        if (!assetId) {
+            alert('กรุณาสแกนหรือพิมพ์รหัสทรัพย์สินก่อนครับ');
+            return;
+        }
+
+        // หากผู้ใช้พิมพ์มือเองและไม่มีเวลาสแกน ให้ใช้เวลาปัจจุบันเป็นเวลาสแกน
+        const scanTime = scanTimeInput.value || getFormattedDateTime();
+        const actionTime = getFormattedDateTime();
+
+        // บันทึกข้อมูลแบบมีทั้งเวลาสแกน และเวลาทำรายการ
+        logs.unshift({ 
+            asset: assetId, 
+            action: actionType, 
+            scanTime: scanTime,
+            actionTime: actionTime 
+        });
+        localStorage.setItem('myAssetLogs', JSON.stringify(logs));
+        
+        renderLogs();
+        
+        // เคลียร์ค่าเพื่อรอชิ้นถัดไป
+        assetInput.value = '';
+        scanTimeInput.value = '';
+        statusDiv.innerText = "บันทึกข้อมูลเรียบร้อย";
+    }
+
+    function renderLogs() {
+        const logListElement = document.getElementById('logList');
+        if (logs.length === 0) {
+            logListElement.innerHTML = '<div style="color:#a0aec0; text-align:center; padding: 10px;">ยังไม่มีประวัติ</div>';
+            return;
+        }
+        logListElement.innerHTML = logs.map(log => `
+            <div class="log-item">
+                <div>
+                    <strong>${log.asset}</strong><br>
+                    <div class="time-info">
+                        📸 สแกนเมื่อ: ${log.scanTime}<br>
+                        ⚡ ทำรายการ: ${log.actionTime}
+                    </div>
+                </div>
+                <div class="${log.action === 'หยิบออก' ? 'status-out' : 'status-in'}">${log.action}</div>
+            </div>
+        `).join('');
+    }
+
+    function exportToExcel() {
+        if (logs.length === 0) {
+            alert('ยังไม่มีข้อมูลประวัติให้ดาวน์โหลดครับ');
+            return;
+        }
+
+        // เพิ่มคอลัมน์ "วัน-เวลาที่สแกน" เข้าไปในไฟล์ Excel
+        const dataForExcel = logs.map((log, index) => ({
+            "ลำดับที่": logs.length - index,
+            "วัน-เวลาที่สแกนสติกเกอร์": log.scanTime,
+            "วัน-เวลาที่กดทำรายการ": log.actionTime,
+            "รหัส / ชื่อทรัพย์สิน": log.asset,
+            "สถานะรายการ": log.action
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "ประวัติยืม-คืน");
+
+        const today = new Date().toISOString().slice(0,10);
+        const filename = `Asset_Notebook_Log_${today}.xlsx`;
+
+        XLSX.writeFile(workbook, filename);
+    }
+</script>
+
+</body>
+</html>
