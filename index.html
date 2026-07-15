@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- ดึงฟอนต์ Itim จาก Google Fonts เข้ามาในเว็บ -->
+    <title>Asset Notebook (Cloud Sync & Custom Notes)</title>
+    <!-- ดึงฟอนต์ Itim จาก Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Itim&display=swap" rel="stylesheet">
-    <title>Asset Notebook (Cloud Sync & Full Features)</title>
     <!-- ไลบรารี OCR อ่านตัวอักษร -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- ไลบรารีสร้างไฟล์ Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Itim', cursive, sans-serif; background-color: #f5f7fb; color: #333; margin: 0; padding: 20px; }
+        body { font-family: 'Itim', cursive, sans-serif; font-size: 18px; font-style: normal; background-color: #f5f7fb; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h2 {text-align: center; color: #2c3e50; margin-top: 0; font-style: normal;}
+        h2 { text-align: center; color: #2c3e50; margin-top: 0; font-style: normal; }
         .section { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .section-title { font-weight: bold; margin-bottom: 10px; color: #4a5568; display: flex; justify-content: space-between; align-items: center; }
         .camera-box { position: relative; width: 100%; max-width: 400px; margin: 0 auto; background: #1a202c; border-radius: 8px; overflow: hidden; aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center; }
@@ -24,24 +24,31 @@
         .scan-region { position: absolute; top: 42.5%; left: 15%; width: 70%; height: 15%; border: 3px dashed #3182ce; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); pointer-events: none; display: none; z-index: 10; }
         .scan-region::after { content: "เล็งตัวอักษรให้อยู่ในกรอบนี้"; position: absolute; bottom: -25px; left: 0; width: 100%; text-align: center; color: #fff; font-size: 12px; background: rgba(0,0,0,0.7); }
         .status-text { text-align: center; font-size: 14px; color: #718096; margin: 8px 0; }
-        input, select { width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-weight: bold; }
+        
+        input, select { font-family: 'Itim', cursive, sans-serif; width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-weight: bold; }
         input { text-align: center; color: #2b6cb0; font-size: 18px; }
+        
+        /* สไตล์พิเศษสำหรับกล่องระบุหมายเหตุ */
+        .note-input { display: none; margin-top: 10px; background-color: #fffaf0; border: 2px solid #fbd38d; color: #dd6b20; text-align: left; font-size: 16px; }
+        .note-input::placeholder { color: #cbd5e0; font-weight: normal; }
+        
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: 600; color: #4a5568; font-size: 14px; }
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        button { padding: 12px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button { font-family: 'Itim', cursive, sans-serif; padding: 12px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .btn-scan { background-color: #3182ce; color: white; width: 100%; margin-top: 10px; }
         .btn-checkout { background-color: #e53e3e; color: white; }
         .btn-checkin { background-color: #38a169; color: white; }
         .btn-excel { background-color: #107c41; color: white; font-size: 12px; padding: 6px 12px; border-radius: 4px; }
         .btn-delete { background-color: #fff; border: 1px solid #e53e3e; color: #e53e3e; padding: 6px 10px; font-size: 12px; border-radius: 4px; font-weight: normal; }
         .btn-delete:hover { background-color: #fff5f5; }
-        .log-list { max-height: 280px; overflow-y: auto; margin-top: 10px; }
-        .log-item { padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
-        .log-left-content { display: flex; align-items: center; gap: 12px; }
-        .log-info { display: flex; flex-direction: column; }
+        
+        .log-list { max-height: 350px; overflow-y: auto; margin-top: 10px; }
+        .log-item { padding: 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .log-left-content { display: flex; align-items: center; gap: 12px; flex: 1; }
+        .log-info { display: flex; flex-direction: column; width: 100%; }
         .time-info { color: #718096; font-size: 11px; margin-top: 4px; line-height: 1.4; }
-        .cabinet-badge { background-color: #edf2f7; color: #4a5568; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 4px; border: 1px solid #cbd5e0; width: fit-content; }
+        .log-cabinet-select { width: auto; max-width: 170px; padding: 4px 6px; font-size: 12px; border: 1px solid #cbd5e0; background-color: #fff; border-radius: 4px; display: inline-block; margin-top: 4px; cursor: pointer; height: auto; }
         .status-out { background-color: #fed7d7; color: #9b2c2c; padding: 4px 8px; border-radius: 4px; font-weight: bold; text-align: center; min-width: 60px; }
         .status-in { background-color: #c6f6d5; color: #22543d; padding: 4px 8px; border-radius: 4px; font-weight: bold; text-align: center; min-width: 60px; }
         .log-right-actions { display: flex; align-items: center; gap: 10px; }
@@ -61,7 +68,7 @@
             <video id="video" autoplay playsinline></video>
             <div class="scan-region" id="scanRegion"></div>
         </div>
-        <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 กดเพื่อสแกนอ่านคำ</button>
+        <button class="btn-scan" id="scanBtn" onclick="startScanProcess()">📸 สแกนอ</button>
         <div class="status-text" id="status">สถานะ: รอการเชื่อมต่อ</div>
     </div>
 
@@ -74,14 +81,17 @@
             <input type="hidden" id="lastScanTime" value="">
         </div>
         <div class="form-group">
-            <label for="cabinetLocation">📦 ตู้เก็บของที่ทำรายการ</label>
-            <select id="cabinetLocation">
+            <label for="cabinetLocation">📦 ตำแหน่งจัดเก็บทรัพย์สิน</label>
+            <!-- 🔄 เปลี่ยนตัวเลือก ตู้ D ให้กลายเป็น "อื่นๆ" เรียบร้อยครับ -->
+            <select id="cabinetLocation" onchange="toggleMainNoteInput()">
                 <option value="ตู้ A">ตู้ A</option>
                 <option value="ตู้ B">ตู้ B</option>
                 <option value="ตู้ C">ตู้ C</option>
-                <option value="ตู้ D">ตู้ D</option>
-
+                <option value="โต๊ะทำงานส่วนตัว">โต๊ะทำงานส่วนตัว</option>
+                <option value="อื่นๆ">อื่นๆ (ระบุหมายเหตุด้านล่าง)</option>
             </select>
+            <!-- ✏️ ช่องพิมพ์ระบุหมายเหตุเพิ่มเติมกรณีเลือก อื่นๆ -->
+            <input type="text" id="customNote" class="note-input" placeholder="พิมพ์ระบุตำแหน่ง หรือชื่อคนยืม เช่น: ตู้ E / ช่างเอกยืม">
         </div>
         <div class="btn-group">
             <button class="btn-checkout" onclick="handleAction('หยิบออก')">📤 หยิบออก</button>
@@ -102,7 +112,6 @@
 <canvas id="canvas"></canvas>
 
 <script>
-    // ตั้งค่าลิงก์ปัจจุบันของคุณเรียบร้อยแล้วครับ
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwi5MA4zGdhH8HBXFAob6dteJui-MLsPrlaZvcw_FD_Y0rIC-6t3Ud1G7yPP7_sy0LvgA/exec";
 
     const video = document.getElementById('video');
@@ -111,6 +120,7 @@
     const assetInput = document.getElementById('assetId');
     const scanTimeInput = document.getElementById('lastScanTime');
     const cabinetSelect = document.getElementById('cabinetLocation');
+    const customNoteInput = document.getElementById('customNote');
     const placeholderText = document.getElementById('placeholderText');
     const scanRegion = document.getElementById('scanRegion');
     const scanBtn = document.getElementById('scanBtn');
@@ -118,7 +128,9 @@
     let currentStream = null;
     let logs = [];
 
-    // ดึงข้อมูลประวัติจากคลาวด์ตอนเริ่มต้น
+    // รายชื่อตู้สำหรับระบบ Dropdown
+    const cabinetOptions = ["ตู้ A", "ตู้ B", "ตู้ C", "โต๊ะทำงานส่วนตัว", "อื่นๆ"];
+
     fetchLogsFromCloud();
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
@@ -128,6 +140,17 @@
     function getFormattedDateTime() {
         const now = new Date();
         return now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+    }
+
+    // เปิด-ปิดการแสดงผลกล่องหมายเหตุในฟอร์มหลัก
+    function toggleMainNoteInput() {
+        if (cabinetSelect.value === "อื่นๆ") {
+            customNoteInput.style.display = "block";
+            customNoteInput.focus();
+        } else {
+            customNoteInput.style.display = "none";
+            customNoteInput.value = "";
+        }
     }
 
     async function startScanProcess() {
@@ -172,7 +195,6 @@
         video.srcObject = null; video.style.display = "none"; scanRegion.style.display = "none"; placeholderText.style.display = "block";
     }
 
-    // ฟังก์ชันดึงประวัติล่าสุดจากคลาวด์ (ถอนจุดล็อกตรวจสอบคำว่า https ออกแล้ว)
     function fetchLogsFromCloud() {
         statusDiv.innerText = "⏳ กำลังซิงค์ประวัติกับคลาวด์...";
         fetch(GOOGLE_SCRIPT_URL)
@@ -183,12 +205,11 @@
                 statusDiv.innerText = "✅ ซิงค์ข้อมูลคลาวด์ล่าสุดแล้ว";
             })
             .catch(err => {
-                document.getElementById('logList').innerText = "ยังไม่สามารถดึงข้อมูลจากคลาวด์ได้ชั่วคราว (กรุณาลองกดทำรายการชิ้นแรกก่อนครับ)";
+                document.getElementById('logList').innerText = "ยังไม่สามารถดึงข้อมูลได้ชั่วคราว (กรุณาลองกดทำรายการชิ้นแรกก่อนครับ)";
                 statusDiv.innerText = "⚠️ รอการทำรายการชิ้นแรก";
             });
     }
 
-    // ฟังก์ชันบันทึกข้อมูลยิงขึ้นคลาวด์ Google Sheets (ปลดล็อกปุ่มสมบูรณ์)
     function handleAction(actionType) {
         const assetId = assetInput.value.trim();
         if (!assetId) {
@@ -196,14 +217,25 @@
             return;
         }
 
+        let finalCabinetValue = cabinetSelect.value;
+        // ถ้าเลือกอื่นๆ ให้นำข้อความในช่องหมายเหตุมาต่อท้ายเพื่อส่งขึ้นชีท
+        if (finalCabinetValue === "อื่นๆ") {
+            const noteText = customNoteInput.value.trim();
+            if (!noteText) {
+                alert('กรุณาระบุหมายเหตุหรือระบุตำแหน่งเพิ่มเติมด้วยครับ');
+                return;
+            }
+            finalCabinetValue = `อื่นๆ (${noteText})`;
+        }
+
         statusDiv.innerText = "⚡ กำลังส่งบันทึกขึ้นระบบคลาวด์...";
         const payload = {
-            id: Date.now(),
+            id: String(Date.now()),
             asset: assetId,
             action: actionType,
             scanTime: scanTimeInput.value || getFormattedDateTime(),
             actionTime: getFormattedDateTime(),
-            cabinet: cabinetSelect.value
+            cabinet: finalCabinetValue
         };
 
         fetch(GOOGLE_SCRIPT_URL, {
@@ -213,11 +245,54 @@
             body: JSON.stringify(payload)
         }).then(() => {
             statusDiv.innerText = "✅ บันทึกบนคลาวด์สำเร็จ!";
-            assetInput.value = ''; scanTimeInput.value = '';
-            // โดลดข้อมูลประวัติที่อัปเดตล่าสุดมาแสดงผล
+            assetInput.value = ''; scanTimeInput.value = ''; customNoteInput.value = '';
+            customNoteInput.style.display = "none";
+            cabinetSelect.value = "ตู้ A";
             setTimeout(fetchLogsFromCloud, 1000);
         }).catch(err => {
             alert('บันทึกข้อมูลไม่สำเร็จ: ' + err.message);
+        });
+    }
+
+    // ฟังก์ชันอัปเดตตำแหน่งตู้ย้อนหลังผ่านตารางประวัติ
+    function handleHistoryCabinetChange(id, selectElement) {
+        let newCabinetValue = selectElement.value;
+        
+        if (newCabinetValue === "อื่นๆ") {
+            const userNote = prompt("กรุณาระบุหมายเหตุเพิ่มเติมสำหรับรายการนี้:");
+            if (userNote === null) { 
+                fetchLogsFromCloud(); // ยกเลิกการเลือก ให้คืนค่าเดิมกลับมาแสดงผล
+                return; 
+            }
+            if (userNote.trim() !== "") {
+                newCabinetValue = `อื่นๆ (${userNote.trim()})`;
+            }
+        }
+        
+        updateCabinetInCloud(id, newCabinetValue);
+    }
+
+    function updateCabinetInCloud(id, newCabinetValue) {
+        if (!id) return;
+        statusDiv.innerText = "🔄 กำลังอัปเดตตำแหน่งตู้บนคลาวด์...";
+        
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'PUT',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: String(id),
+                cabinet: newCabinetValue
+            })
+        }).then(() => {
+            statusDiv.innerText = "✅ อัปเดตข้อมูลบนคลาวด์สำเร็จ!";
+            // บันทึกค่าลงตัวแปร Local ทันทีเพื่อให้เวลาดาวน์โหลด Excel ได้ค่าใหม่ทันที
+            const targetLog = logs.find(log => String(log.id) === String(id));
+            if (targetLog) targetLog.cabinet = newCabinetValue;
+            renderLogs(); // วาดรายการประวัติใหม่เพื่ออัปเดตข้อความหมายเหตุใน Dropdown
+        }).catch(err => {
+            alert('ไม่สามารถอัปเดตข้อมูลบนคลาวด์ได้: ' + err.message);
+            fetchLogsFromCloud();
         });
     }
 
@@ -234,21 +309,47 @@
             logListElement.innerHTML = '<div style="color:#a0aec0; text-align:center; padding: 10px;">ยังไม่มีประวัติในคลาวด์</div>';
             return;
         }
-        logListElement.innerHTML = logs.map((log, index) => `
-            <div class="log-item">
-                <div class="log-left-content">
-                    <div class="log-info">
-                        <strong>${log.asset}</strong> 
-                        <div class="cabinet-badge">📍 ${log.cabinet || 'ไม่ได้ระบุ'}</div>
-                        <div class="time-info">📸 สแกน: ${log.scanTime}<br>⚡ ทำรายการ: ${log.actionTime}</div>
+        
+        logListElement.innerHTML = logs.map((log, index) => {
+            let isCustomValue = true;
+            let matchedOption = "อื่นๆ";
+            
+            // ตรวจสอบว่าค่าวาดในคลาวด์ตรงกับตัวเลือกหลักตัวไหนไหม
+            cabinetOptions.forEach(opt => {
+                if (log.cabinet === opt) {
+                    isCustomValue = false;
+                    matchedOption = opt;
+                }
+            });
+
+            // สร้าง Dropdown ในประวัติย้อนหลัง
+            const selectOptionsHtml = cabinetOptions.map(opt => {
+                const isSelected = (matchedOption === opt) ? 'selected' : '';
+                // หากตัวเลือกเป็นอื่นๆ และค่าปัจจุบันมีหมายเหตุผสมอยู่ ให้โชว์ข้อความจริงกำกับไว้เลย
+                const displayText = (opt === "อื่นๆ" && isCustomValue) ? `📍 ${log.cabinet}` : `📍 ${opt}`;
+                return `<option value="${opt}" ${isSelected}>${displayText}</option>`;
+            }).join('');
+
+            return `
+                <div class="log-item">
+                    <div class="log-left-content">
+                        <div class="log-info">
+                            <strong>${log.asset}</strong> 
+                            <div>
+                                <select class="log-cabinet-select" onchange="handleHistoryCabinetChange('${log.id}', this)">
+                                    ${selectOptionsHtml}
+                                </select>
+                            </div>
+                            <div class="time-info">📸 สแกน: ${log.scanTime}<br>⚡ ทำรายการ: ${log.actionTime}</div>
+                        </div>
+                    </div>
+                    <div class="log-right-actions">
+                        <div class="${log.action === 'หยิบออก' ? 'status-out' : 'status-in'}">${log.action}</div>
+                        <button class="btn-delete" onclick="deleteLog(${index})">🗑️ ลบ</button>
                     </div>
                 </div>
-                <div class="log-right-actions">
-                    <div class="${log.action === 'หยิบออก' ? 'status-out' : 'status-in'}">${log.action}</div>
-                    <button class="btn-delete" onclick="deleteLog(${index})">🗑️ ลบ</button>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     function exportToExcel() {
