@@ -12,6 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- ไลบรารีสร้างไฟล์ Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
     <style>
         body { font-family: 'Itim', cursive, sans-serif; font-size: 18px; font-style: normal; background-color: #f5f7fb; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
@@ -133,7 +134,8 @@
             <div class="section-title">🔄 ระบุรายละเอียดข้อมูล</div>
             <div class="form-group">
                 <label for="assetId">รหัสทรัพย์สินที่สแกนได้</label>
-                <input type="text" id="assetId" placeholder="Asset Number">
+                <!-- ✅ เพิ่ม oninput ดักจับภาษาไทยทันทีที่พิมพ์หรือข้อความเปลี่ยน -->
+                <input type="text" id="assetId" placeholder="Asset Number" oninput="validateEnglishOnly(this)">    
                 <input type="hidden" id="lastScanTime" value="">
             </div>
             <div class="form-group">
@@ -656,6 +658,11 @@
         const filename = `Asset_Cloud_Log_${today}.xlsx`;
         XLSX.writeFile(workbook, filename);
     }
+    // 🔤 ฟังก์ชันบังคับให้พิมพ์ได้เฉพาะภาษาอังกฤษ, ตัวเลข, ช่องว่าง และเครื่องหมาย - _ เท่านั้น
+function validateEnglishOnly(element) {
+    // ดักจับอักษรที่ไม่ใช่ A-Z, a-z, 0-9, ช่องว่าง, ขีดกลาง, ขีดล่าง แล้วเปลี่ยนเป็นค่าว่าง ""
+    element.value = element.value.replace(/[^a-zA-Z0-9\-_ ]/g, '');
+}
 </script>
 </body>
 </html>
