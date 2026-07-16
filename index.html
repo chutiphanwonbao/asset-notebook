@@ -124,11 +124,8 @@
                 <video id="video" autoplay playsinline></video>
                 <div class="scan-region" id="scanRegion"></div>
             </div>
-            <!-- 📸 เพิ่มปุ่มชัตเตอร์ควบคุมแยกชิ้น -->
-<div style="display: flex; gap: 8px; margin-top: 10px;">
-    <button class="btn-scan" id="scanBtn" onclick="startScanProcess()" style="flex: 1; margin-top: 0;">🎥 เปิดกล้องเล็งคำ</button>
-    <button class="btn-checkin" id="captureBtn" onclick="captureAndOcr()" style="flex: 1; display: none; background-color: #dd6b20;">📸 ถ่ายภาพและอ่านคำ</button>
-</div>
+           <!-- 🎥 ปุ่มเดี่ยวทำหน้าที่ 2 สถานะ (เปิดกล้อง / ถ่ายภาพ) -->
+<button class="btn-scan" id="singleScanBtn" onclick="handleSingleBtnClock()" style="width: 100%; margin-top: 10px; transition: all 0.3s;">🎥 เปิดกล้องเล็งคำ</button>
             <div class="status-text" id="status">สถานะ: รอการเชื่อมต่อ</div>
         </div>
 
@@ -277,69 +274,69 @@
         }
     }
 
-    // 🎥 1. ฟังก์ชันเปิดกล้องทิ้งไว้เพื่อให้ผู้ใช้เล็งตัวอักษร
-    async function startScanProcess() {
-        statusDiv.innerText = "🔌 กำลังเปิดกล้อง...";
-        document.getElementById('scanBtn').disabled = true;
+    // ตัวแปรเช็กสถานะปัจจุบันของกล้อง (false = ปิดอยู่, true = เปิดพร้อมถ่าย)
+    let isCameraOpen = false; 
+
+    // 🎛️ 1. ฟังก์ชันศูนย์ควบคุมหลักเมื่อมีการกดปุ่มเดี่ยว
+    async function handleSingleBtnClock() {
+        const btn = document.getElementById('singleScanBtn');
         
-        try {
-            currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-            video.srcObject = currentStream;
-            video.style.display = "block";
-            scanRegion.style.display = "block";
-            placeholderText.style.display = "none";
+        if (!isCameraOpen) {
+            // 🟥 สถานะที่ 1: กล้องปิดอยู่ -> กดเพื่อเปิดกล้อง
+            statusDiv.innerText = "🔌 กำลังเปิดกล้อง...";
+            btn.disabled = true;
             
-            // ปล่อยให้กล้องเปิดค้างไว้ แล้วสลับแสดงปุ่มชัตเตอร์ให้กดถ่ายเอง
-            document.getElementById('captureBtn').style.display = "block";
-            statusDiv.innerText = "📸 กล้องพร้อมแล้ว เล็งตัวอักษรให้อยู่ในกรอบแล้วกดถ่ายได้เลยครับ";
-        } catch (err) {
-            statusDiv.innerText = "ข้อผิดพลาดกล้อง: " + err.message;
-            stopCamera();
-            document.getElementById('scanBtn').disabled = false;
-        }
-    }
-
-    // 📸 2. ฟังก์ชันชัตเตอร์ (กดถ่ายเองเมื่อพร้อม) + ส่งให้ AI ประมวลผลอ่านคำ
-    async function captureAndOcr() {
-        const captureBtn = document.getElementById('captureBtn');
-        const scanBtn = document.getElementById('scanBtn');
-        
-        statusDiv.innerText = "🧠 AI กำลังอ่านคำจากภาพที่ถ่าย...";
-        captureBtn.disabled = true;
-
-        try {
-            const ctx = canvas.getContext('2d');
-            canvas.width = 500; canvas.height = 120;
-            
-            // วาดภาพจากวิดีโอ ณ วินาทีที่กดปุ่มลงบนแคนวาส
-            ctx.drawImage(video, (video.videoWidth - 500) / 2, (video.videoHeight - 120) / 2, 500, 120, 0, 0, 500, 120);
-
-            // ปิดกล้องทันทีหลังถ่ายเสร็จเพื่อประหยัดแบตเตอรี่มือถือ
-            stopCamera();
-            
-            // ส่งภาพให้ Tesseract OCR แกะข้อความออกเป็นตัวอักษร
-            const result = await Tesseract.recognize(canvas, 'eng');
-            let cleanText = result.data.text.trim().replace(/[^a-zA-Z0-9-_ ]/g, '');
-            
-            if (cleanText) {
-                assetInput.value = cleanText;
-                scanTimeInput.value = getFormattedDateTime();
-                statusDiv.innerText = "✅ สแกนคำสำเร็จ";
-            } else {
-                statusDiv.innerText = "❌ ภาพไม่ชัดหรืออ่านไม่ออก ลองเปิดกล้องถ่ายใหม่อีกครั้งครับ";
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+                video.srcObject = currentStream;
+                video.style.display = "block";
+                scanRegion.style.display = "block";
+                placeholderText.style.display = "none";
+                
+                // 🔄 เปลี่ยนร่างปุ่มเป็นปุ่มชัตเตอร์สีส้มทันที
+                isCameraOpen = true;
+                btn.innerText = "📸 ถ่ายภาพและอ่านคำ";
+                btn.style.backgroundColor = "#dd6b20"; // สีส้มชัตเตอร์
+                statusDiv.innerText = "เล็งตัวอักษรให้อยู่ในกรอบแล้วกดปุ่มเดิมเพื่อถ่ายได้เลยครับ";
+            } catch (err) {
+                statusDiv.innerText = "ข้อผิดพลาดกล้อง: " + err.message;
+                stopCamera();
+            } finally {
+                btn.disabled = false;
             }
-        } catch (err) {
-            statusDiv.innerText = "เกิดข้อผิดพลาดในการประมวลผล: " + err.message;
-            stopCamera();
-        } finally {
-            // คืนค่าปุ่มให้กลับมาพร้อมกดใช้งานรอบถัดไป
-            captureBtn.disabled = false;
-            captureBtn.style.display = "none";
-            scanBtn.disabled = false;
+        } else {
+            // 🟧 สถานะที่ 2: กล้องเปิดอยู่ -> กดปุ่มเดิมเพื่อถ่ายภาพและประมวลผล OCR
+            statusDiv.innerText = "🧠 AI กำลังอ่านคำจากภาพที่ถ่าย...";
+            btn.disabled = true;
+
+            try {
+                const ctx = canvas.getContext('2d');
+                canvas.width = 500; canvas.height = 120;
+                ctx.drawImage(video, (video.videoWidth - 500) / 2, (video.videoHeight - 120) / 2, 500, 120, 0, 0, 500, 120);
+
+                // ปิดกล้องหลังถ่ายเสร็จ
+                stopCamera();
+                
+                const result = await Tesseract.recognize(canvas, 'eng');
+                let cleanText = result.data.text.trim().replace(/[^a-zA-Z0-9-_ ]/g, '');
+                
+                if (cleanText) {
+                    assetInput.value = cleanText;
+                    scanTimeInput.value = getFormattedDateTime();
+                    statusDiv.innerText = "✅ สแกนคำสำเร็จ";
+                } else {
+                    statusDiv.innerText = "❌ ภาพไม่ชัดหรืออ่านไม่ออก ลองเปิดกล้องถ่ายใหม่อีกครั้งครับ";
+                }
+            } catch (err) {
+                statusDiv.innerText = "เกิดข้อผิดพลาด: " + err.message;
+                stopCamera();
+            } finally {
+                btn.disabled = false;
+            }
         }
     }
 
-    // 🛑 3. ฟังก์ชันปิดกล้องและเคลียร์หน้าจอ (ซ่อมให้รองรับปุ่มชัตเตอร์เพิ่ม)
+    // 🛑 2. ฟังก์ชันปิดกล้องและคืนค่าปุ่มกลับเป็นสีฟ้าเริ่มต้น
     function stopCamera() {
         if (currentStream) { 
             currentStream.getTracks().forEach(track => track.stop()); 
@@ -349,7 +346,14 @@
         video.style.display = "none"; 
         scanRegion.style.display = "none"; 
         placeholderText.style.display = "block";
-        document.getElementById('captureBtn').style.display = "none";
+        
+        // 🔄 คืนร่างปุ่มกลับมาเป็นปุ่มเปิดกล้องสีฟ้าปกติ
+        isCameraOpen = false;
+        const btn = document.getElementById('singleScanBtn');
+        if (btn) {
+            btn.innerText = "🎥 เปิดกล้องเล็งคำ";
+            btn.style.backgroundColor = "#3182ce"; // สีฟ้าเริ่มต้น
+        }
     }
 
     function fetchLogsFromCloud() {
