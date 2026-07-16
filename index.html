@@ -401,15 +401,7 @@
             return;
         }
 
-        let finalCabinetValue = cabinetSelect.value;
-        if (finalCabinetValue === "อื่นๆ") {
-            const noteText = customNoteInput.value.trim();
-            if (!noteText) {
-                alert('กรุณาระบุหมายเหตุหรือระบุตำแหน่งเพิ่มเติมด้วยครับ');
-                return;
-            }
-            finalCabinetValue = `อื่นๆ (${noteText})`;
-        }
+     
 
         statusDiv.innerText = "⚡ กำลังส่งบันทึกขึ้นระบบคลาวด์...";
         const payload = {
