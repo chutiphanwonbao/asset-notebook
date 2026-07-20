@@ -392,15 +392,22 @@
 
         const currentStatus = currentAssets[assetId];
 
-        // ตัดเงื่อนไข !currentStatus ออกไป เพื่อเปิดทางให้ของใหม่ลงทะเบียนเข้าตู้ได้ทันที
+        // ✅ เหลือไว้แค่อันนี้อันเดียวพอครับ (ตรวจสอบเฉพาะกรณีที่ตู้ซ้ำจริง ๆ)
         if (actionType === 'เก็บคืน' && currentStatus === 'เก็บคืน') {
             alert(`⚠️ ไม่สามารถทำรายการได้: ทรัพย์สิน "${assetId}" นี้มีสถานะอยู่ในตู้พร้อมใช้งานอยู่แล้ว ไม่ต้องกดเก็บคืนซ้ำครับ`);
             return;
         }
 
-        if (actionType === 'เก็บคืน' && (currentStatus === 'เก็บคืน' || !currentStatus)) {
-            alert(`⚠️ ไม่สามารถทำรายการได้: ทรัพย์สิน "${assetId}" พร้อมใช้งานอยู่ในตู้แล้ว ไม่ต้องคืนซ้ำครับ`);
-            return;
+        // ❌ บล็อกเงื่อนไขอันเดิมที่มี (!currentStatus) ให้ลบทิ้งไปได้เลยครับ
+
+        let finalCabinetValue = cabinetSelect.value;
+        if (finalCabinetValue === "อื่นๆ") {
+            const noteText = customNoteInput.value.trim();
+            if (!noteText) {
+                alert('กรุณาระบุหมายเหตุหรือระบุตำแหน่งเพิ่มเติมด้วยครับ');
+                return;
+            }
+            finalCabinetValue = `อื่นๆ (${noteText})`;
         }
 
      
