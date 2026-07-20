@@ -125,8 +125,8 @@
                 <video id="video" autoplay playsinline></video>
                 <div class="scan-region" id="scanRegion"></div>
             </div>
-           <!-- 🎥 ปุ่มเดี่ยวทำหน้าที่ 2 สถานะ (เปิดกล้อง / ถ่ายภาพ) -->
-<button class="btn-scan" id="singleScanBtn" onclick="handleSingleBtnClock()" style="width: 100%; margin-top: 10px; transition: all 0.3s;">🎥 เปิดกล้อง</button>
+            <!-- 🎥 ปุ่มเดี่ยวทำหน้าที่ 2 สถานะ (เปิดกล้อง / ถ่ายภาพ) -->
+            <button class="btn-scan" id="singleScanBtn" onclick="handleSingleBtnClock()" style="width: 100%; margin-top: 10px; transition: all 0.3s;">🎥 เปิดกล้อง</button>
             <div class="status-text" id="status">สถานะ: รอการเชื่อมต่อ</div>
         </div>
 
@@ -238,7 +238,7 @@
     let currentStream = null;
     let logs = [];
 
-    const cabinetOptions = ["ตู้ A", "ตู้ B", "ตู้ C", "โต๊ะทำงานส่วนตัว", "อื่นๆ"];
+    const cabinetOptions = ["ตู้ A", "ตู้ B", "ตู้ C", "ตู้ D", "โต๊ะทำงานส่วนตัว", "อื่นๆ"];
 
     fetchLogsFromCloud();
 
@@ -279,12 +279,11 @@
     // ตัวแปรเช็กสถานะปัจจุบันของกล้อง (false = ปิดอยู่, true = เปิดพร้อมถ่าย)
     let isCameraOpen = false; 
 
-    // 🎛️ 1. ฟังก์ชันศูนย์ควบคุมหลักเมื่อมีการกดปุ่มเดี่ยว
+    // 🎛️ ฟังก์ชันศูนย์ควบคุมหลักเมื่อมีการกดปุ่มเดี่ยว (เปิดกล้อง / กดชัตเตอร์ถ่ายเอง)
     async function handleSingleBtnClock() {
         const btn = document.getElementById('singleScanBtn');
         
         if (!isCameraOpen) {
-            // 🟥 สถานะที่ 1: กล้องปิดอยู่ -> กดเพื่อเปิดกล้อง
             statusDiv.innerText = "🔌 กำลังเปิดกล้อง...";
             btn.disabled = true;
             
@@ -295,10 +294,9 @@
                 scanRegion.style.display = "block";
                 placeholderText.style.display = "none";
                 
-                // 🔄 เปลี่ยนร่างปุ่มเป็นปุ่มชัตเตอร์สีส้มทันที
                 isCameraOpen = true;
                 btn.innerText = "📸 ถ่ายภาพและอ่านคำ";
-                btn.style.backgroundColor = "#dd6b20"; // สีส้มชัตเตอร์
+                btn.style.backgroundColor = "#dd6b20"; // สลับเป็นสีส้มชัตเตอร์
                 statusDiv.innerText = "เล็งตัวอักษรให้อยู่ในกรอบแล้วกดปุ่มเดิมเพื่อถ่ายได้เลยครับ";
             } catch (err) {
                 statusDiv.innerText = "ข้อผิดพลาดกล้อง: " + err.message;
@@ -307,7 +305,6 @@
                 btn.disabled = false;
             }
         } else {
-            // 🟧 สถานะที่ 2: กล้องเปิดอยู่ -> กดปุ่มเดิมเพื่อถ่ายภาพและประมวลผล OCR
             statusDiv.innerText = "🧠 AI กำลังอ่านคำจากภาพที่ถ่าย...";
             btn.disabled = true;
 
@@ -316,7 +313,6 @@
                 canvas.width = 500; canvas.height = 120;
                 ctx.drawImage(video, (video.videoWidth - 500) / 2, (video.videoHeight - 120) / 2, 500, 120, 0, 0, 500, 120);
 
-                // ปิดกล้องหลังถ่ายเสร็จ
                 stopCamera();
                 
                 const result = await Tesseract.recognize(canvas, 'eng');
@@ -338,7 +334,7 @@
         }
     }
 
-    // 🛑 2. ฟังก์ชันปิดกล้องและคืนค่าปุ่มกลับเป็นสีฟ้าเริ่มต้น
+    // 🛑 ฟังก์ชันปิดกล้องและคืนค่าปุ่มกลับเป็นสีฟ้าเริ่มต้น
     function stopCamera() {
         if (currentStream) { 
             currentStream.getTracks().forEach(track => track.stop()); 
@@ -349,12 +345,11 @@
         scanRegion.style.display = "none"; 
         placeholderText.style.display = "block";
         
-        // 🔄 คืนร่างปุ่มกลับมาเป็นปุ่มเปิดกล้องสีฟ้าปกติ
         isCameraOpen = false;
         const btn = document.getElementById('singleScanBtn');
         if (btn) {
-            btn.innerText = "🎥 เปิดกล้องเล็งคำ";
-            btn.style.backgroundColor = "#3182ce"; // สีฟ้าเริ่มต้น
+            btn.innerText = "🎥 เปิดกล้อง";
+            btn.style.backgroundColor = "#3182ce"; // คืนค่าสีฟ้าเริ่มต้น
         }
     }
 
@@ -374,6 +369,7 @@
             });
     }
 
+    // 🔒 ฟังก์ชันบันทึกข้อมูล พร้อมระบบความปลอดภัยคัดแยกของเก่า / ของใหม่ซิง ๆ
     function handleAction(actionType) {
         const assetId = assetInput.value.trim();
         if (!assetId) {
@@ -381,7 +377,6 @@
             return;
         }
 
-        // 🔒 บล็อกการทำงานซ้ำซ้อน (ป้องกันข้อมูลเสียหายในสต็อก)
         const currentAssets = {};
         logs.forEach(log => {
             const assetName = log.asset;
@@ -392,13 +387,25 @@
 
         const currentStatus = currentAssets[assetId];
 
-        // ✅ เหลือไว้แค่อันนี้อันเดียวพอครับ (ตรวจสอบเฉพาะกรณีที่ตู้ซ้ำจริง ๆ)
-        if (actionType === 'เก็บคืน' && currentStatus === 'เก็บคืน') {
-            alert(`⚠️ ไม่สามารถทำรายการได้: ทรัพย์สิน "${assetId}" นี้มีสถานะอยู่ในตู้พร้อมใช้งานอยู่แล้ว ไม่ต้องกดเก็บคืนซ้ำครับ`);
-            return;
-        }
+        // 🌟 [เคสที่ 1]: ถ้าเป็นของใหม่แกะกล่องที่ยังไม่เคยมีในฐานข้อมูลเลย
+        if (!currentStatus) {
+            if (actionType === 'หยิบออก') {
+                alert(`⚠️ ไม่สามารถทำรายการได้: ทรัพย์สิน "${assetId}" เป็นของชิ้นใหม่ที่ยังไม่เคยลงทะเบียนเข้าตู้จัดเก็บ กรุณากดปุ่ม "เก็บคืน" เพื่อลงทะเบียนของเข้าตู้เป็นครั้งแรกก่อนครับ`);
+                return;
+            }
+        } 
+        // 🌟 [เคสที่ 2]: ถ้าเป็นของเดิมที่มีประวัติบันทึกอยู่ใน Google Sheets แล้ว
+        else {
+            if (actionType === 'หยิบออก' && currentStatus === 'หยิบออก') {
+                alert(`⚠️ ไม่สามารถทำรายการได้: ทรัพย์สิน "${assetId}" นี้ถูกหยิบออกไปแล้ว ต้องรอให้มีการเก็บคืนเข้าตู้ก่อนครับ`);
+                return;
+            }
 
-        // ❌ บล็อกเงื่อนไขอันเดิมที่มี (!currentStatus) ให้ลบทิ้งไปได้เลยครับ
+            if (actionType === 'เก็บคืน' && currentStatus === 'เก็บคืน') {
+                alert(`⚠️ ไม่สามารถทำรายการได้: ทรัพย์สิน "${assetId}" นี้มีสถานะอยู่ในตู้พร้อมใช้งานอยู่แล้ว ไม่ต้องกดเก็บคืนซ้ำครับ`);
+                return;
+            }
+        }
 
         let finalCabinetValue = cabinetSelect.value;
         if (finalCabinetValue === "อื่นๆ") {
@@ -409,8 +416,6 @@
             }
             finalCabinetValue = `อื่นๆ (${noteText})`;
         }
-
-     
 
         statusDiv.innerText = "⚡ กำลังส่งบันทึกขึ้นระบบคลาวด์...";
         const payload = {
@@ -665,11 +670,11 @@
         const filename = `Asset_Cloud_Log_${today}.xlsx`;
         XLSX.writeFile(workbook, filename);
     }
+
     // 🔤 ฟังก์ชันบังคับให้พิมพ์ได้เฉพาะภาษาอังกฤษ, ตัวเลข, ช่องว่าง และเครื่องหมาย - _ เท่านั้น
-function validateEnglishOnly(element) {
-    // ดักจับอักษรที่ไม่ใช่ A-Z, a-z, 0-9, ช่องว่าง, ขีดกลาง, ขีดล่าง แล้วเปลี่ยนเป็นค่าว่าง ""
-    element.value = element.value.replace(/[^a-zA-Z0-9\-_ ]/g, '');
-}
+    function validateEnglishOnly(element) {
+        element.value = element.value.replace(/[^a-zA-Z0-9\-_ ]/g, '');
+    }
 </script>
 </body>
 </html>
